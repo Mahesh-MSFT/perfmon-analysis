@@ -29,7 +29,9 @@ Perfmon File Analyzer addresses the challenges discussed above. It is a utility 
 
 Following flowchart describes high-level overview of how Perfmon File Analyzer works.
 
+```mermaid
 flowchart TD
+
     A[Start] --> B[Convert .blg to .csv]
     B --> C[Extract PerfMon Data]
     C --> D[Initialize Perfmon Counter/metric List]
@@ -44,6 +46,7 @@ flowchart TD
     L --> M[Organize & Process statistics]
     M --> N[Write to Excel]
     N --> O[End]
+```
 
 Each of the step is described below.
 
