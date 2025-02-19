@@ -34,12 +34,12 @@ flowchart TD
 
     A[Start] --> B[Convert .blg to .csv]
     B --> C[Extract PerfMon Data]
-    C --> D[Initialize Perfmon Counter/metric List]
+    C --> D[Initialize Perfmon Counter or metric List]
     D --> E[Find Logical end of the test]
     E --> F{Logical end Found?}
     F -->|Yes| G[Calculate statistics for baseline metric]
     F -->|No| H[Skip to Next File]
-    G --> I[Calculate statistics for all other metrics]
+    G --> I[Calculate statistics for other metrics]
     I --> J[Increment File Counter]
     J --> K{All Files Processed?}
     K -->|Yes| L[Consolidate statistics]
