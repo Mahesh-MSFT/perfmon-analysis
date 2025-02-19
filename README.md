@@ -9,7 +9,7 @@ Performance testing involves execution of multiple runs. These runs spans multip
 
 As mentioned earlier, performance testing activity typically spans multiple days/weeks. Teams involved in performance testing encounter following challenges.
 
-1. *perfmon file sprwal*: As the number of performance test runs increase, there is related growth in number of perfom files. If there are multiple servers on which diagnostic data is captured through perfmon then growth in perfmon files is multipled by those many servers. Such a performance testing activity can quickly result in huge number of perfmon files to be analyzed.
+1. *perfmon file sprawl*: As the number of performance test runs increase, there is related growth in number of perfom files. If there are multiple servers on which diagnostic data is captured through perfmon then growth in perfmon files is multipled by those many servers. Such a performance testing activity can quickly result in huge number of perfmon files to be analyzed.
 
 2. *Comparison*: While each perfmon file captures daignostic data for a specific run, it is necessary to compare them across multiple runs. As part of performnce testing, teams typically tweak a confifuration or code and run the test again. Such mode of operation involves comparing and contrasting diagnostics data across multiple runs. It quickly becomes challenging to compare multiple perfmon files across multiple runs and servers being profiled.
 
