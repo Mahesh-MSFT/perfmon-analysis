@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import gc
 
 from modules.calculate_statistics import calculate_statistics
 from modules.convert_blg_to_csv import convert_blg_to_csv
@@ -50,6 +51,12 @@ if __name__ == '__main__':
 
     # Write the combined statistics to an Excel file
     excel_creator(all_statistics_df, log_directory)
+    
+    # Explicitly clear large DataFrame from memory
+    del all_statistics_df
+    
+    # Force garbage collection to free up memory
+    gc.collect()
 
     end_time = pd.Timestamp.now()
     elapsed_time = end_time - start_time

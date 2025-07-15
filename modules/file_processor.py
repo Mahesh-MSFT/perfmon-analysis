@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 import psutil
+import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from modules.calculate_statistics import calculate_statistics
 from modules.ensure_consistent_structure import ensure_consistent_structure
@@ -87,12 +88,17 @@ def process_single_file(args):
         
         if not (steepest_fall_time and steepest_fall_value):
             print(f"No steepest fall found for {baseline_metric_name} in {file_path}")
+            # Clear memory before returning
+            del perfmon_data
             return []
         
         # Extract date/time info
         file_date_time = steepest_fall_time.strftime('%d-%b')
         filtered_perfmon_data = perfmon_data[perfmon_data[time_column] <= steepest_fall_time]
         start_time = filtered_perfmon_data[time_column].min().strftime('%H:%M')
+        
+        # Clear original data to free memory - we only need the filtered data
+        del perfmon_data
         
         # Prepare arguments for parallel metric processing
         # Pass the filtered data instead of file path to avoid reloading
@@ -126,6 +132,10 @@ def process_single_file(args):
                         statistics_list.append(result)
                 except Exception as e:
                     print(f"Error processing metric {metric_name}: {e}")
+        
+        # Clear filtered data and force garbage collection
+        del filtered_perfmon_data
+        gc.collect()
         
         return statistics_list
         
