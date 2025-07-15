@@ -2,7 +2,7 @@
 import os
 import pandas as pd
 import psutil
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from modules.calculate_statistics import calculate_statistics
 from modules.ensure_consistent_structure import ensure_consistent_structure
 from modules.find_steepest_fall import find_steepest_fall
@@ -28,19 +28,24 @@ def detect_time_column(perfmon_data):
 
 def process_single_metric(args):
     """Process a single metric for a given file and steepest fall data."""
-    file_path, metric_name, steepest_fall_time, file_date_time, start_time = args
+    filtered_perfmon_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time = args
     
     try:
-        # Load only the time column and columns containing the metric name
-        perfmon_data = pd.read_csv(file_path, low_memory=False)
-        time_column = detect_time_column(perfmon_data)
+        print(f"Processing metric: {metric_name}")
+
+        # Further filter to only include time column and columns containing the metric name
+        metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
+        if not metric_columns:
+            print(f"No columns found for metric '{metric_name}'")
+            return pd.DataFrame()
         
-        # Filter to steepest fall time
-        filtered_perfmon_data = perfmon_data[perfmon_data[time_column] <= steepest_fall_time]
+        # Create a subset with only the time column and relevant metric columns
+        columns_to_keep = [time_column] + metric_columns
+        metric_filtered_data = filtered_perfmon_data[columns_to_keep]
         
         # Calculate statistics for this metric
         statistics_df = calculate_statistics(
-            filtered_perfmon_data, 
+            metric_filtered_data, 
             metric_name, 
             file_date_time, 
             start_time, 
@@ -53,7 +58,7 @@ def process_single_metric(args):
         return statistics_df
         
     except Exception as e:
-        print(f"Error processing metric {metric_name} in file {file_path}: {e}")
+        print(f"Error processing metric {metric_name}: {e}")
         return pd.DataFrame()
 
 def process_single_file(args):
@@ -70,13 +75,12 @@ def process_single_file(args):
             print(f"No data found in file: {file_path}")
             return []
         
-        # Debug: Print column names to understand the CSV structure
-        print(f"Columns in {os.path.basename(file_path)}: {list(perfmon_data.columns[:5])}...")  # Show first 5 columns
-        print(f"Total columns: {len(perfmon_data.columns)}, Total rows: {len(perfmon_data)}")
-        
         # Detect the actual time column
         time_column = detect_time_column(perfmon_data)
-        print(f"Detected time column: {time_column}")
+        
+        # Convert time column to datetime if it's not already
+        if not pd.api.types.is_datetime64_any_dtype(perfmon_data[time_column]):
+            perfmon_data[time_column] = pd.to_datetime(perfmon_data[time_column])
         
         # Find the steepest fall for the baseline metric
         steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(perfmon_data, baseline_metric_name, time_column)
@@ -91,8 +95,9 @@ def process_single_file(args):
         start_time = filtered_perfmon_data[time_column].min().strftime('%H:%M')
         
         # Prepare arguments for parallel metric processing
+        # Pass the filtered data instead of file path to avoid reloading
         metric_args = [
-            (file_path, metric_name, steepest_fall_time, file_date_time, start_time)
+            (filtered_perfmon_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time)
             for metric_name in metric_names
         ]
         
@@ -103,9 +108,13 @@ def process_single_file(args):
         base_cpu_fraction = 0.8 / max(1, file_level_workers * 0.5)  # Scale down with more file workers
         max_workers_metrics = max(1, min(len(metric_names), int(os.cpu_count() * base_cpu_fraction)))
         
-        with ProcessPoolExecutor(max_workers=max_workers_metrics) as executor:
+        print(f"Using {max_workers_metrics} workers for {len(metric_names)} metrics")
+        
+        # Use ThreadPoolExecutor for metric processing since we're passing DataFrames
+        # which are expensive to serialize between processes
+        with ThreadPoolExecutor(max_workers=max_workers_metrics) as executor:
             future_to_metric = {
-                executor.submit(process_single_metric, args): args[1] 
+                executor.submit(process_single_metric, args): args[2]  # args[2] is metric_name
                 for args in metric_args
             }
             

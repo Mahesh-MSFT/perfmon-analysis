@@ -1,6 +1,5 @@
 import os
 
-
 def excel_creator(all_statistics_df, log_directory):
     output_excel_path = os.path.join(log_directory, 'combined_metrics.xlsx')
     os.makedirs(os.path.dirname(output_excel_path), exist_ok=True)  # Ensure the directory exists

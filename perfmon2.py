@@ -9,7 +9,6 @@ from modules.find_steepest_fall import find_steepest_fall
 from modules.excel_creator import excel_creator
 from modules.file_processor import file_processor
 
-# start
 log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
 metric_names = ['Request Execution Time',
          '# of Exceps Thrown', 
@@ -39,6 +38,10 @@ metric_names = ['Request Execution Time',
 baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'
 
 if __name__ == '__main__':
+    # Log Start Date and Time
+    start_time = pd.Timestamp.now()
+    print("Script started at:", start_time)
+    
     # Convert .blg files to .csv files
     convert_blg_to_csv(log_directory)
 
@@ -46,4 +49,15 @@ if __name__ == '__main__':
     all_statistics_df = file_processor(log_directory, metric_names, baseline_metric_name)
 
     # Write the combined statistics to an Excel file
-    #excel_creator(all_statistics_df, log_directory)
+    excel_creator(all_statistics_df, log_directory)
+
+    end_time = pd.Timestamp.now()
+    elapsed_time = end_time - start_time
+    
+    # Format elapsed time in minutes and seconds
+    total_seconds = elapsed_time.total_seconds()
+    minutes = int(total_seconds // 60)
+    seconds = total_seconds % 60
+    
+    print("Script completed at:", end_time)
+    print(f"Total elapsed time: {minutes} minutes and {seconds:.2f} seconds")

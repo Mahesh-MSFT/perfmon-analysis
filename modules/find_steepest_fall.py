@@ -70,4 +70,14 @@ def find_steepest_fall(df, specific_metric_name, time_column=None):
     value_before_increase = resampled_df[metric_column].loc[time_of_highest_increase - pd.Timedelta(minutes=5)]
     value_after_increase = resampled_df[metric_column].loc[time_of_highest_increase]
     
-    return time_of_highest_increase + pd.Timedelta(minutes=5), value_before_increase, value_after_increase
+    # Calculate the steepest fall time (time of highest increase + 5 minutes)
+    steepest_fall_time = time_of_highest_increase + pd.Timedelta(minutes=5)
+    
+    # Get the last time in the time column
+    last_time_in_data = df.index.max()
+    
+    # Print debug information to console
+    print(f"Last time in data: {last_time_in_data}")
+    print(f"Steepest fall time: {steepest_fall_time}")
+    
+    return steepest_fall_time, value_before_increase, value_after_increase
