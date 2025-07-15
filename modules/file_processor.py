@@ -68,6 +68,7 @@ def process_single_file(args):
     
     try:
         print(f"Processing file: {file_path}")
+        file_start_time = pd.Timestamp.now()
         
         # Load the full file once to find steepest fall
         perfmon_data = pd.read_csv(file_path, low_memory=False)
@@ -136,6 +137,10 @@ def process_single_file(args):
         # Clear filtered data and force garbage collection
         del filtered_perfmon_data
         gc.collect()
+        
+        file_end_time = pd.Timestamp.now()
+        file_duration = (file_end_time - file_start_time).total_seconds()
+        print(f"File {os.path.basename(file_path)} completed in {file_duration:.2f} seconds")
         
         return statistics_list
         
@@ -214,6 +219,9 @@ def file_processor(log_directory, metric_names, baseline_metric_name):
     # Process files in parallel
     all_statistics_list = []
     
+    print(f"Starting parallel processing with {max_workers} workers...")
+    parallel_start_time = pd.Timestamp.now()
+    
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         future_to_file = {
             executor.submit(process_single_file, args): args[0] 
@@ -233,6 +241,10 @@ def file_processor(log_directory, metric_names, baseline_metric_name):
                 
             except Exception as e:
                 print(f"Error processing file {file_path}: {e}")
+    
+    parallel_end_time = pd.Timestamp.now()
+    parallel_duration = (parallel_end_time - parallel_start_time).total_seconds()
+    print(f"Parallel processing completed in {parallel_duration:.2f} seconds")
     
     # Combine all results
     if all_statistics_list:
