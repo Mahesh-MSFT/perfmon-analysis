@@ -77,7 +77,7 @@ def find_steepest_fall(df, specific_metric_name, time_column=None):
     last_time_in_data = df.index.max()
     
     # Print debug information to console
-    print(f"Last time in data: {last_time_in_data}")
-    print(f"Steepest fall time: {steepest_fall_time}")
+    #print(f"Last time in data: {last_time_in_data}")
+    #print(f"Steepest fall time: {steepest_fall_time}")
     
     return steepest_fall_time, value_before_increase, value_after_increase

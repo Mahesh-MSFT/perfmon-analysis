@@ -32,7 +32,7 @@ def process_single_metric(args):
     filtered_perfmon_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time = args
     
     try:
-        print(f"Processing metric: {metric_name}")
+        #print(f"Processing metric: {metric_name}")
 
         # Further filter to only include time column and columns containing the metric name
         metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]

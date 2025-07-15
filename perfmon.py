@@ -3,6 +3,25 @@ import pandas as pd
 import subprocess
 import numpy as np
 
+def detect_time_column(perfmon_data):
+    """
+    Detect the time column in the CSV data.
+    Handles any timezone that relog.exe might generate (GMT, PST, EST, etc.) 
+    with both Standard Time and Daylight/Summer Time variations.
+    """
+    for column in perfmon_data.columns:
+        # Look for PDH-CSV 4.0 format with any timezone and time offset
+        if (column.startswith('(PDH-CSV 4.0) (') and 
+            'Time)(' in column and 
+            column.endswith(')')):
+            return column
+    
+    # Fallback - return the first column if no PDH-CSV time column found
+    if len(perfmon_data.columns) > 0:
+        return perfmon_data.columns[0]
+    
+    raise ValueError("No time column found in the CSV data")
+
 def convert_blg_to_csv(log_dir):
     """
     Convert all .blg files in the log directory to .csv files using relog.exe,
@@ -39,12 +58,14 @@ def extract_perfmon_data(log_dir, metric_names, chunk_size=100000):
                     filtered_columns = []
                     for metric_name in metric_names:
                         filtered_columns.extend(chunk.filter(like=metric_name).columns.tolist())
-                    time_column = '(PDH-CSV 4.0) (GMT Standard Time)(0)'
+                    
+                    # Detect time column dynamically
+                    time_column = detect_time_column(chunk)
                     if time_column in chunk.columns:
                         filtered_columns.append(time_column)
                     else:
-                        print(f"'{time_column}' column not found in {file_name}")
-                        continue  # Skip this chunk if 'Time' column is not found
+                        print(f"Time column '{time_column}' not found in {file_name}")
+                        continue  # Skip this chunk if time column is not found
 
                     filtered_chunk = chunk[filtered_columns]
                     data_frames.append(filtered_chunk)
@@ -61,7 +82,8 @@ def find_steepest_fall(df, specific_metric_name):
         print("DataFrame is empty.")
         return None, None, None  # Return None if the DataFrame is empty
     
-    time_column = '(PDH-CSV 4.0) (GMT Standard Time)(0)'
+    # Detect time column dynamically
+    time_column = detect_time_column(df)
     if time_column not in df.columns:
         print(f"Time column '{time_column}' not found in the DataFrame.")
         return None, None, None
@@ -184,7 +206,7 @@ def ensure_consistent_structure(df):
     return df
 
 # usage
-log_directory = r'C:\Path\To\All\BLGs'
+log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
 metric_names = ['Request Execution Time',
          '# of Exceps Thrown', 
          '# of current logical Threads',
@@ -212,6 +234,10 @@ metric_names = ['Request Execution Time',
          '(_Total)\% Processor Time']
 baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'
 
+# Log Start Date and Time
+script_start_time = pd.Timestamp.now()
+print("Script started at:", script_start_time)
+
 # Convert .blg files to .csv files
 convert_blg_to_csv(log_directory)
 
@@ -231,6 +257,14 @@ for root, dirs, files in os.walk(log_directory):
 
             perfmon_data = pd.read_csv(file_path, low_memory=False)
             
+            # Detect time column dynamically
+            if not perfmon_data.empty:
+                time_column = detect_time_column(perfmon_data)
+                
+                # Convert time column to datetime if it's not already
+                if not pd.api.types.is_datetime64_any_dtype(perfmon_data[time_column]):
+                    perfmon_data[time_column] = pd.to_datetime(perfmon_data[time_column])
+            
             # Find the steepest fall for the specific metric
             if not perfmon_data.empty:
                 steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(perfmon_data, baseline_metric_name)
@@ -240,10 +274,10 @@ for root, dirs, files in os.walk(log_directory):
                     #print(f"Steepest fall found for {specific_metric_name} at {steepest_fall_time}: {steepest_fall_value}")
 
                     # Filter the original dataset to include only rows up to the time of the steepest fall
-                    filtered_perfmon_data = perfmon_data[perfmon_data['(PDH-CSV 4.0) (GMT Standard Time)(0)'] <= steepest_fall_time]
+                    filtered_perfmon_data = perfmon_data[perfmon_data[time_column] <= steepest_fall_time]
 
                     # Find the first point in time in filtered_perfmon_data after sorting it and convert it to HH:MM format
-                    start_time = filtered_perfmon_data['(PDH-CSV 4.0) (GMT Standard Time)(0)'].min().strftime('%H:%M')
+                    start_time = filtered_perfmon_data[time_column].min().strftime('%H:%M')
                     
                     # Calculate average and maximum values for columns whose names include the specific metric name
                     statistics_df = calculate_statistics(filtered_perfmon_data, baseline_metric_name, file_date_time, start_time, steepest_fall_time.strftime('%H:%M'))
@@ -298,3 +332,14 @@ output_excel_path = os.path.join(log_directory, 'combined_metrics.xlsx')
 os.makedirs(os.path.dirname(output_excel_path), exist_ok=True)  # Ensure the directory exists
 all_statistics_df.to_excel(output_excel_path, index=True)
 print(f"\nCombined metrics have been written to {output_excel_path}")
+
+script_end_time = pd.Timestamp.now()
+elapsed_time = script_end_time - script_start_time
+
+# Format elapsed time in minutes and seconds
+total_seconds = elapsed_time.total_seconds()
+minutes = int(total_seconds // 60)
+seconds = total_seconds % 60
+
+print("Script completed at:", script_end_time)
+print(f"Total elapsed time: {minutes} minutes and {seconds:.2f} seconds")
