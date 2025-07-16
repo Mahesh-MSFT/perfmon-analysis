@@ -86,7 +86,7 @@ def process_single_file(args):
                 small_df, baseline_metric_name, time_column
             )
 
-            print(f"Steepest fall time for {file_path}: {steepest_fall_time}, value: {steepest_fall_value}")
+            #print(f"Steepest fall time for {file_path}: {steepest_fall_time}, value: {steepest_fall_value}")
 
         if not (steepest_fall_time and steepest_fall_value):
             print(f"No steepest fall found for {baseline_metric_name} in {file_path}")
