@@ -29,20 +29,13 @@ def detect_time_column(perfmon_data):
 
 def process_single_metric(args):
     """Process a single metric for a given file and steepest fall data."""
-    filtered_perfmon_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time = args
+    metric_filtered_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time = args
     
     try:
         #print(f"Processing metric: {metric_name}")
 
-        # Further filter to only include time column and columns containing the metric name
-        metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
-        if not metric_columns:
-            print(f"No columns found for metric '{metric_name}'")
-            return pd.DataFrame()
-        
-        # Create a subset with only the time column and relevant metric columns
-        columns_to_keep = [time_column] + metric_columns
-        metric_filtered_data = filtered_perfmon_data[columns_to_keep]
+        # The metric_filtered_data is already pre-filtered to contain only relevant columns
+        # No need for additional column filtering here
         
         # Calculate statistics for this metric
         statistics_df = calculate_statistics(
@@ -101,11 +94,23 @@ def process_single_file(args):
         # Clear original data to free memory - we only need the filtered data
         del perfmon_data
         
-        # Prepare arguments for parallel metric processing
-        # Pass the filtered data instead of file path to avoid reloading
+        # Pre-filter data per metric to enable ProcessPoolExecutor usage
+        # Create metric-specific DataFrames with only relevant columns
+        metric_specific_data = {}
+        for metric_name in metric_names:
+            metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
+            if metric_columns:
+                columns_to_keep = [time_column] + metric_columns
+                metric_specific_data[metric_name] = filtered_perfmon_data[columns_to_keep]
+        
+        # Clear the large filtered DataFrame immediately after creating metric-specific data
+        del filtered_perfmon_data
+        gc.collect()
+        
+        # Prepare arguments for parallel metric processing using pre-filtered data
         metric_args = [
-            (filtered_perfmon_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time)
-            for metric_name in metric_names
+            (metric_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time)
+            for metric_name, metric_data in metric_specific_data.items()
         ]
         
         # Process metrics in parallel
@@ -115,11 +120,11 @@ def process_single_file(args):
         base_cpu_fraction = 0.8 / max(1, file_level_workers * 0.5)  # Scale down with more file workers
         max_workers_metrics = max(1, min(len(metric_names), int(os.cpu_count() * base_cpu_fraction)))
         
-        print(f"Using {max_workers_metrics} workers for {len(metric_names)} metrics")
+        print(f"Using {max_workers_metrics} workers for {len(metric_args)} metrics")
         
-        # Use ThreadPoolExecutor for metric processing since we're passing DataFrames
-        # which are expensive to serialize between processes
-        with ThreadPoolExecutor(max_workers=max_workers_metrics) as executor:
+        # Use ProcessPoolExecutor for metric processing since we're now passing small DataFrames
+        # which are much cheaper to serialize between processes
+        with ProcessPoolExecutor(max_workers=max_workers_metrics) as executor:
             future_to_metric = {
                 executor.submit(process_single_metric, args): args[2]  # args[2] is metric_name
                 for args in metric_args
@@ -134,8 +139,8 @@ def process_single_file(args):
                 except Exception as e:
                     print(f"Error processing metric {metric_name}: {e}")
         
-        # Clear filtered data and force garbage collection
-        del filtered_perfmon_data
+        # Clear metric-specific data and force garbage collection
+        del metric_specific_data
         gc.collect()
         
         file_end_time = pd.Timestamp.now()
