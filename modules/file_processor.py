@@ -77,9 +77,17 @@ def process_single_file(args):
         if not pd.api.types.is_datetime64_any_dtype(perfmon_data[time_column]):
             perfmon_data[time_column] = pd.to_datetime(perfmon_data[time_column])
         
-        # Find the steepest fall for the baseline metric
-        steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(perfmon_data, baseline_metric_name, time_column)
-        
+        # filter the DataFrame to only the needed columns before calling find_steepest_fall:
+        baseline_columns = [col for col in perfmon_data.columns if baseline_metric_name in col]
+        if baseline_columns:
+            small_df = perfmon_data[[time_column] + baseline_columns[:1]]
+            # Find the steepest fall for the baseline metric
+            steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(
+                small_df, baseline_metric_name, time_column
+            )
+
+            print(f"Steepest fall time for {file_path}: {steepest_fall_time}, value: {steepest_fall_value}")
+
         if not (steepest_fall_time and steepest_fall_value):
             print(f"No steepest fall found for {baseline_metric_name} in {file_path}")
             # Clear memory before returning
@@ -90,7 +98,7 @@ def process_single_file(args):
         file_date_time = steepest_fall_time.strftime('%d-%b')
         filtered_perfmon_data = perfmon_data[perfmon_data[time_column] <= steepest_fall_time]
         start_time = filtered_perfmon_data[time_column].min().strftime('%H:%M')
-        
+
         # Clear original data to free memory - we only need the filtered data
         del perfmon_data
         
@@ -124,7 +132,7 @@ def process_single_file(args):
         
         # Use ProcessPoolExecutor for metric processing since we're now passing small DataFrames
         # which are much cheaper to serialize between processes
-        with ProcessPoolExecutor(max_workers=max_workers_metrics) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers_metrics) as executor:
             future_to_metric = {
                 executor.submit(process_single_metric, args): args[2]  # args[2] is metric_name
                 for args in metric_args

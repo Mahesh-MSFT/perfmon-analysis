@@ -10,7 +10,7 @@ from modules.find_steepest_fall import find_steepest_fall
 from modules.excel_creator import excel_creator
 from modules.file_processor import file_processor
 
-log_directory = r'C:\PATH\TO\BLGs'
+log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
 metric_names = ['Request Execution Time',
          '# of Exceps Thrown', 
          '# of current logical Threads',
