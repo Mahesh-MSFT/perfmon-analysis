@@ -24,7 +24,7 @@ def find_steepest_fall(df, specific_metric_name, time_column=None):
         print(f"Time column '{time_column}' not found in the DataFrame.")
         return None, None, None
     
-    df[time_column] = pd.to_datetime(df[time_column])
+    df.loc[:, time_column] = pd.to_datetime(df[time_column])
     
     # Sort the DataFrame by the time column in descending order
     df = df.sort_values(by=time_column, ascending=False)
