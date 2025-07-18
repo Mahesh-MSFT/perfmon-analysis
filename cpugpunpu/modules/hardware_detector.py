@@ -27,6 +27,8 @@ class GPUCapabilities:
     api_support: List[str]  # OpenCL, DirectX, etc.
     shared_memory: bool
     driver_version: str
+    cuda_available: bool = False
+    opencl_available: bool = False
     
 @dataclass
 class NPUCapabilities:
@@ -35,6 +37,7 @@ class NPUCapabilities:
     tops_rating: float
     available: bool
     frameworks: List[str]  # ONNX, DirectML, etc.
+    openvino_available: bool = False
     
 @dataclass
 class HardwareProfile:
@@ -44,6 +47,8 @@ class HardwareProfile:
     npu: Optional[NPUCapabilities]
     total_memory_gb: float
     available_memory_gb: float
+    gpu_libraries_available: Dict[str, bool] = None
+    npu_libraries_available: Dict[str, bool] = None
     
 class HardwareDetector:
     """Detects and analyzes available hardware for optimal workload distribution"""
@@ -62,12 +67,27 @@ class HardwareDetector:
         total_memory_gb = memory_info.total / (1024**3)
         available_memory_gb = memory_info.available / (1024**3)
         
+        # Detect available acceleration libraries
+        gpu_libraries = self._detect_gpu_libraries() if gpu_caps else {}
+        npu_libraries = self._detect_npu_libraries() if npu_caps else {}
+        
+        # Update GPU capabilities with library info
+        if gpu_caps:
+            gpu_caps.cuda_available = gpu_libraries.get('cupy', False) or gpu_libraries.get('torch_cuda', False)
+            gpu_caps.opencl_available = gpu_libraries.get('opencl', False)
+        
+        # Update NPU capabilities with library info
+        if npu_caps:
+            npu_caps.openvino_available = npu_libraries.get('openvino', False)
+        
         self.profile = HardwareProfile(
             cpu=cpu_caps,
             gpu=gpu_caps,
             npu=npu_caps,
             total_memory_gb=total_memory_gb,
-            available_memory_gb=available_memory_gb
+            available_memory_gb=available_memory_gb,
+            gpu_libraries_available=gpu_libraries,
+            npu_libraries_available=npu_libraries
         )
     
     def _detect_cpu_capabilities(self) -> CPUCapabilities:
@@ -197,6 +217,107 @@ class HardwareDetector:
             print(f"NPU detection failed: {e}")
             return None
     
+    def _detect_gpu_libraries(self) -> Dict[str, bool]:
+        """Detect available GPU acceleration libraries"""
+        libraries = {
+            'cupy': False,
+            'cudf': False,
+            'numba_cuda': False,
+            'tensorflow_gpu': False,
+            'torch_cuda': False,
+            'opencl': False
+        }
+        
+        # Test CuPy (GPU-accelerated NumPy)
+        try:
+            import cupy
+            libraries['cupy'] = True
+        except ImportError:
+            pass
+        
+        # Test cuDF (GPU-accelerated pandas)
+        try:
+            import cudf
+            libraries['cudf'] = True
+        except ImportError:
+            pass
+        
+        # Test Numba CUDA
+        try:
+            from numba import cuda
+            if cuda.is_available():
+                libraries['numba_cuda'] = True
+        except ImportError:
+            pass
+        
+        # Test TensorFlow GPU
+        try:
+            import tensorflow as tf
+            if tf.config.list_physical_devices('GPU'):
+                libraries['tensorflow_gpu'] = True
+        except ImportError:
+            pass
+        
+        # Test PyTorch CUDA
+        try:
+            import torch
+            if torch.cuda.is_available():
+                libraries['torch_cuda'] = True
+        except ImportError:
+            pass
+        
+        # Test OpenCL
+        try:
+            import pyopencl as cl
+            platforms = cl.get_platforms()
+            if platforms:
+                libraries['opencl'] = True
+        except ImportError:
+            pass
+        
+        return libraries
+    
+    def _detect_npu_libraries(self) -> Dict[str, bool]:
+        """Detect available NPU acceleration libraries"""
+        libraries = {
+            'openvino': False,
+            'intel_extension_pytorch': False,
+            'onnxruntime_directml': False,
+            'neural_compressor': False
+        }
+        
+        # Test OpenVINO
+        try:
+            import openvino
+            libraries['openvino'] = True
+        except ImportError:
+            pass
+        
+        # Test Intel Extension for PyTorch
+        try:
+            import intel_extension_for_pytorch
+            libraries['intel_extension_pytorch'] = True
+        except ImportError:
+            pass
+        
+        # Test ONNX Runtime with DirectML
+        try:
+            import onnxruntime
+            providers = onnxruntime.get_available_providers()
+            if 'DmlExecutionProvider' in providers:
+                libraries['onnxruntime_directml'] = True
+        except ImportError:
+            pass
+        
+        # Test Neural Compressor
+        try:
+            import neural_compressor
+            libraries['neural_compressor'] = True
+        except ImportError:
+            pass
+        
+        return libraries
+    
     def get_optimal_worker_allocation(self, workload_type: str, data_size_gb: float) -> Dict[str, int]:
         """
         Determine optimal worker allocation based on hardware capabilities and workload characteristics
@@ -269,6 +390,16 @@ class HardwareDetector:
             print(f"Compute Units: {self.profile.gpu.compute_units}")
             print(f"API Support: {', '.join(self.profile.gpu.api_support)}")
             print(f"Driver Version: {self.profile.gpu.driver_version}")
+            print(f"CUDA Available: {'Yes' if self.profile.gpu.cuda_available else 'No'}")
+            print(f"OpenCL Available: {'Yes' if self.profile.gpu.opencl_available else 'No'}")
+            
+            # Show available GPU libraries
+            if self.profile.gpu_libraries_available:
+                available_libs = [lib for lib, available in self.profile.gpu_libraries_available.items() if available]
+                if available_libs:
+                    print(f"GPU Libraries: {', '.join(available_libs)}")
+                else:
+                    print("GPU Libraries: None installed")
         else:
             print("\nGPU: Not detected or not supported")
         
@@ -277,6 +408,15 @@ class HardwareDetector:
             print(f"\nNPU: {self.profile.npu.name}")
             print(f"Performance: {self.profile.npu.tops_rating} TOPS")
             print(f"Frameworks: {', '.join(self.profile.npu.frameworks)}")
+            print(f"OpenVINO Available: {'Yes' if self.profile.npu.openvino_available else 'No'}")
+            
+            # Show available NPU libraries
+            if self.profile.npu_libraries_available:
+                available_libs = [lib for lib, available in self.profile.npu_libraries_available.items() if available]
+                if available_libs:
+                    print(f"NPU Libraries: {', '.join(available_libs)}")
+                else:
+                    print("NPU Libraries: None installed")
         else:
             print("\nNPU: Not detected or not supported")
         

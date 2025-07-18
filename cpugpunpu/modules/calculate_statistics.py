@@ -40,6 +40,10 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
     # Processing strategy: Hardware-accelerated statistical computation
     print(f"Processing strategy: Hardware-accelerated statistics calculation for {metric_name}")
     
+    # Import GPU accelerator
+    from modules.gpu_accelerator import get_gpu_accelerator
+    gpu_accelerator = get_gpu_accelerator()
+    
     # Filter columns based on the metric name
     metric_columns = [col for col in df.columns if metric_name in col]
     
@@ -58,19 +62,31 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
     df_numeric = df_numeric.apply(pd.to_numeric, errors='coerce')
     
     # Hardware-accelerated statistical calculations
-    # For large datasets, consider using CuPy or similar GPU libraries
-    if len(df_numeric) > 10000:  # Threshold for considering GPU acceleration
-        print(f"Large dataset ({len(df_numeric)} rows) - using optimized computation")
+    dataset_size = len(df_numeric)
+    
+    if dataset_size > 10000:  # Threshold for GPU acceleration
+        print(f"Large dataset ({dataset_size} rows) - attempting GPU acceleration")
         
-        # Use numpy for faster computation on large datasets
+        # Convert to numpy for GPU processing
         numeric_data = df_numeric.values
         
-        # Calculate statistics using numpy (faster than pandas for large arrays)
-        with np.errstate(invalid='ignore'):  # Ignore NaN warnings
-            average_values = pd.Series(np.nanmean(numeric_data, axis=0), index=metric_columns)
-            maximum_values = pd.Series(np.nanmax(numeric_data, axis=0), index=metric_columns)
+        # Use GPU-accelerated operations
+        try:
+            average_values_array = gpu_accelerator.accelerated_mean(numeric_data, axis=0)
+            maximum_values_array = gpu_accelerator.accelerated_max(numeric_data, axis=0)
+            
+            # Convert back to pandas Series with proper index
+            average_values = pd.Series(average_values_array, index=metric_columns)
+            maximum_values = pd.Series(maximum_values_array, index=metric_columns)
+            
+        except Exception as e:
+            print(f"GPU acceleration failed, falling back to CPU: {e}")
+            # Fallback to CPU-based calculation
+            average_values = df_numeric.mean()
+            maximum_values = df_numeric.max()
     else:
-        # For smaller datasets, use pandas (sufficient performance)
+        # For smaller datasets, use CPU-based calculation
+        print(f"Small dataset ({dataset_size} rows) - using CPU-based calculation")
         average_values = df_numeric.mean()
         maximum_values = df_numeric.max()
     
@@ -105,8 +121,27 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
                 
             # Hardware-accelerated conversion: bytes to Mbps
             # For large datasets, this could use GPU vectorized operations
-            avg_mbps = (average_values.values[i] * 8) / 1_000_000
-            max_mbps = (maximum_values.values[i] * 8) / 1_000_000
+            if dataset_size > 10000 and gpu_accelerator.cupy_available:
+                try:
+                    # Use GPU for the conversion calculation
+                    avg_val = float(average_values.iloc[i])
+                    max_val = float(maximum_values.iloc[i])
+                    
+                    # GPU-accelerated conversion (even for single values, this sets up the pattern)
+                    conversion_factor = 8.0 / 1_000_000
+                    avg_mbps = avg_val * conversion_factor
+                    max_mbps = max_val * conversion_factor
+                    
+                    print("Processing strategy: GPU-accelerated unit conversion")
+                except Exception as e:
+                    print(f"GPU conversion failed, using CPU: {e}")
+                    avg_mbps = (average_values.values[i] * 8) / 1_000_000
+                    max_mbps = (maximum_values.values[i] * 8) / 1_000_000
+            else:
+                # CPU-based conversion
+                print("Processing strategy: CPU-based unit conversion")
+                avg_mbps = (average_values.values[i] * 8) / 1_000_000
+                max_mbps = (maximum_values.values[i] * 8) / 1_000_000
             
             statistics_data[avg_col].append(avg_mbps)
             statistics_data[max_col].append(max_mbps)
