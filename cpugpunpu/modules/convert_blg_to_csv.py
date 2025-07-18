@@ -11,6 +11,9 @@ def convert_single_blg_file(blg_file_path: str) -> Tuple[bool, str, str]:
     Convert a single .blg file to .csv using relog.exe.
     Returns a tuple: (success: bool, blg_file_path: str, message: str)
     """
+    # Processing strategy: CPU-based (using relog.exe system process)
+    print(f"Processing strategy: CPU-based conversion for {os.path.basename(blg_file_path)}")
+    
     csv_file_path = os.path.splitext(blg_file_path)[0] + '.csv'
     
     if os.path.exists(csv_file_path):
@@ -27,6 +30,9 @@ def convert_single_blg_file(blg_file_path: str) -> Tuple[bool, str, str]:
 
 def estimate_workload_size(blg_files: List[str]) -> float:
     """Estimate total workload size in GB based on BLG files"""
+    # Processing strategy: CPU-based (file system operations)
+    print("Processing strategy: CPU-based workload estimation")
+    
     total_size = 0
     for file_path in blg_files[:3]:  # Sample first 3 files
         try:
@@ -51,6 +57,9 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
     Returns:
         Dictionary with conversion statistics
     """
+    # Processing strategy: Hardware-accelerated (CPU+GPU+NPU aware)
+    print("Processing strategy: Hardware-accelerated conversion with intelligent worker allocation")
+    
     # Find all BLG files
     blg_files = []
     for root, dirs, files in os.walk(log_dir):
@@ -67,6 +76,8 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
     worker_allocation = get_optimal_workers('io_bound', workload_size_gb)
     max_workers = max(1, worker_allocation['cpu'])
     
+    # Display detailed processing strategy
+    print(f"Hardware allocation: CPU workers={max_workers}, GPU workers={worker_allocation.get('gpu', 0)}, NPU workers={worker_allocation.get('npu', 0)}")
     print(f"Converting {total_files} BLG files using {max_workers} workers...")
     
     # Initialize counters
@@ -120,4 +131,7 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
 # Alias for backward compatibility
 def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
     """Backward-compatible wrapper for the accelerated conversion function"""
+    # Processing strategy: Hardware-accelerated (wrapper function)
+    print("Processing strategy: Hardware-accelerated (backward-compatible wrapper)")
+    
     return convert_blg_to_csv_accelerated(log_dir)
