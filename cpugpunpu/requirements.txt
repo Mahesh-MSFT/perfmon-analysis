@@ -1,0 +1,22 @@
+# Requirements for perfmon3.py - Hardware-accelerated performance analysis
+# Core dependencies (same as perfmon2.py)
+pandas>=1.5.0
+numpy>=1.21.0
+psutil>=5.8.0
+openpyxl>=3.0.0
+
+# Additional dependencies for hardware acceleration
+# GPU acceleration (optional - install based on available hardware)
+# pyopencl>=2022.1.0  # For OpenCL GPU computing
+# cupy>=10.0.0         # For NVIDIA CUDA (if available)
+
+# NPU acceleration (optional - install based on available hardware)
+# onnxruntime>=1.12.0  # For ONNX NPU inference
+# intel-extension-for-pytorch>=1.12.0  # For Intel NPU support
+
+# Hardware detection
+# wmi>=1.5.1          # For Windows hardware detection (Windows only)
+
+# Note: Many of these dependencies are optional and should be installed
+# based on your specific hardware configuration. The system will
+# automatically detect available hardware and use appropriate acceleration.
