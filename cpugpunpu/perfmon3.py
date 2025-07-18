@@ -9,9 +9,10 @@ import gc
 # Add parent directory to Python path to access shared modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import hardware detection and conversion
+# Import hardware detection and processing modules
 from modules.hardware_detector import get_hardware_detector, print_hardware_info
 from modules.convert_blg_to_csv import convert_blg_to_csv_accelerated
+from modules.file_processor import file_processor_accelerated
 
 # Configuration
 log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
@@ -46,9 +47,9 @@ def choose_processing_strategy() -> str:
         return 'cpu_only'
 
 def main():
-    """Main execution function - Hardware-accelerated BLG to CSV conversion"""
+    """Main execution function - Hardware-accelerated BLG conversion and CSV processing"""
     
-    print("PERFMON3 - Hardware-accelerated BLG conversion")
+    print("PERFMON3 - Hardware-accelerated BLG conversion and CSV processing")
     print(f"Log directory: {log_directory}")
     
     # Print hardware information
@@ -67,26 +68,67 @@ def main():
     start_time = pd.Timestamp.now()
     
     try:
-        # Hardware-accelerated BLG to CSV conversion
+        # Step 1: Hardware-accelerated BLG to CSV conversion
+        print("\n" + "="*50)
+        print("STEP 1: BLG TO CSV CONVERSION")
+        print("="*50)
+        
         conversion_stats = convert_blg_to_csv_accelerated(log_directory)
         
         if conversion_stats['total'] == 0:
             print("No BLG files found to process.")
             return
         
-        # Show results
-        print(f"\nConversion completed:")
-        print(f"  Total files: {conversion_stats['total']}")
-        print(f"  Converted: {conversion_stats['converted']}")
-        print(f"  Skipped: {conversion_stats['skipped']}")
-        print(f"  Failed: {conversion_stats['failed']}")
-        print(f"  Throughput: {conversion_stats.get('throughput', 0):.2f} files/second")
+        print(f"Conversion completed: {conversion_stats['converted']} files converted")
+        
+        # Step 2: Hardware-accelerated CSV processing
+        print("\n" + "="*50)
+        print("STEP 2: CSV FILE PROCESSING")
+        print("="*50)
+        
+        # Define metrics to analyze (same as perfmon2)
+        metric_names = ['Request Execution Time',
+                 '# of Exceps Thrown', 
+                 '# of current logical Threads',
+                 '# of current physical Threads',
+                 'Contention Rate / sec',
+                 'Current Queue Length',
+                 'Queue Length Peak',
+                 '% Time in GC',
+                 'NumberOfActiveConnectionPools',
+                 'NumberOfActiveConnections',
+                 'NumberOfPooledConnections',
+                 'Total Application Pool Recycles',
+                 '% Managed Processor Time (estimated)',
+                 'Managed Memory Used (estimated)',
+                 'Request Wait Time',
+                 'Requests Failed',
+                 'Requests/Sec',
+                 'ArrivalRate',
+                 'CurrentQueueSize',
+                 'Network Adapter(vmxnet3 Ethernet Adapter _2)\Bytes Total/sec',
+                 'Network Adapter(vmxnet3 Ethernet Adapter _2)\Current Bandwidth',
+                 'Network Adapter(vmxnet3 Ethernet Adapter _2)\TCP RSC Coalesced Packets/sec',
+                 'NUMA Node Memory(0)\Available MBytes',
+                 'NUMA Node Memory(1)\Available MBytes',
+                 '(_Total)\% Processor Time']
+        
+        baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'  # Same as perfmon2
+        
+        # Process CSV files with hardware acceleration
+        statistics_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name)
+        
+        if not statistics_df.empty:
+            print(f"Statistics calculated for {len(statistics_df)} metrics")
+            print(f"Columns: {list(statistics_df.columns)}")
+        else:
+            print("No statistics data was generated.")
         
         # Memory cleanup
         gc.collect()
         
     except Exception as e:
-        print(f"Error during BLG conversion: {e}")
+        print(f"Error during processing: {e}")
         import traceback
         traceback.print_exc()
     
@@ -98,7 +140,7 @@ def main():
     seconds = total_seconds % 60
     
     print(f"\nTotal elapsed time: {minutes} minutes and {seconds:.2f} seconds")
-    print("BLG conversion complete.")
+    print("Hardware-accelerated processing complete.")
 
 if __name__ == '__main__':
     main()
