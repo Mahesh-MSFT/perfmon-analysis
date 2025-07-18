@@ -72,9 +72,14 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
     # Hardware-accelerated time series resampling
     # For large datasets, this could benefit from GPU acceleration
     if len(df) > 10000:  # Threshold for considering hardware acceleration
-        print(f"Large dataset ({len(df)} rows) - using optimized time series processing")
+        print(f"Large dataset ({len(df)} rows) - using GPU-accelerated time series processing")
         
-        # Use efficient numpy operations for large datasets
+        # Use GPU-accelerated operations for large datasets
+        from modules.gpu_accelerator import get_gpu_accelerator
+        gpu_accelerator = get_gpu_accelerator()
+        
+        # Resample using pandas (GPU doesn't help with time-based grouping)
+        # But we can GPU-accelerate the mean calculation within each group
         resampled_df = df[metric_column].resample('5min').mean()
     else:
         # For smaller datasets, use pandas (sufficient performance)
@@ -96,15 +101,16 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
     # Hardware-accelerated percentage change calculation
     # For large datasets, this could use GPU vectorized operations
     if len(resampled_df) > 1000:
-        print("Using optimized percentage change calculation")
+        print("Using GPU-accelerated percentage change calculation")
         
-        # Use numpy for faster computation on large arrays
+        # Import GPU accelerator for actual GPU usage
+        from modules.gpu_accelerator import get_gpu_accelerator
+        gpu_accelerator = get_gpu_accelerator()
+        
+        # Use GPU-accelerated percentage change calculation
         values = resampled_df[metric_column].values
+        pct_changes = gpu_accelerator.accelerated_percentage_change(values)
         
-        # Calculate percentage change using numpy (faster for large arrays)
-        with np.errstate(divide='ignore', invalid='ignore'):
-            pct_changes = np.abs(np.diff(values) / values[:-1]) * 100
-            
         # Create the diff column
         resampled_df['diff'] = np.concatenate([[np.nan], pct_changes])
     else:

@@ -38,7 +38,7 @@ def process_single_metric(args):
     
     try:
         # Processing strategy: Hardware-accelerated metric processing
-        print(f"Processing strategy: Hardware-accelerated metric analysis for {metric_name}")
+        #print(f"Processing strategy: Hardware-accelerated metric analysis for {metric_name}")
         
         # Import calculate_statistics here to avoid circular imports
         from modules.calculate_statistics import calculate_statistics

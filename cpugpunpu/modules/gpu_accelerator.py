@@ -70,7 +70,7 @@ class GPUAccelerator:
     
     def accelerated_mean(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
         """GPU-accelerated mean calculation with CPU fallback"""
-        if self.cupy_available and data.size > 10000:
+        if self.cupy_available and data.size > 5000:
             try:
                 # Processing strategy: GPU-accelerated mean calculation
                 print("Processing strategy: GPU-accelerated mean calculation (CuPy)")
@@ -80,7 +80,7 @@ class GPUAccelerator:
             except Exception as e:
                 print(f"GPU mean calculation failed, falling back to CPU: {e}")
         
-        if self.opencl_available and data.size > 10000:
+        if self.opencl_available and data.size > 5000:
             try:
                 # Processing strategy: OpenCL GPU-accelerated mean calculation
                 print("Processing strategy: GPU-accelerated mean calculation (OpenCL)")
@@ -95,7 +95,7 @@ class GPUAccelerator:
     
     def accelerated_max(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
         """GPU-accelerated max calculation with CPU fallback"""
-        if self.cupy_available and data.size > 10000:
+        if self.cupy_available and data.size > 5000:
             try:
                 # Processing strategy: GPU-accelerated max calculation
                 print("Processing strategy: GPU-accelerated max calculation (CuPy)")
@@ -105,7 +105,7 @@ class GPUAccelerator:
             except Exception as e:
                 print(f"GPU max calculation failed, falling back to CPU: {e}")
         
-        if self.opencl_available and data.size > 10000:
+        if self.opencl_available and data.size > 5000:
             try:
                 # Processing strategy: OpenCL GPU-accelerated max calculation
                 print("Processing strategy: GPU-accelerated max calculation (OpenCL)")

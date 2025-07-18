@@ -38,7 +38,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
         DataFrame with calculated statistics
     """
     # Processing strategy: Hardware-accelerated statistical computation
-    print(f"Processing strategy: Hardware-accelerated statistics calculation for {metric_name}")
+    #print(f"Processing strategy: Hardware-accelerated statistics calculation for {metric_name}")
     
     # Import GPU accelerator
     from modules.gpu_accelerator import get_gpu_accelerator
@@ -64,7 +64,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
     # Hardware-accelerated statistical calculations
     dataset_size = len(df_numeric)
     
-    if dataset_size > 10000:  # Threshold for GPU acceleration
+    if dataset_size > 5000:  # Lowered threshold for GPU acceleration (was 10000)
         print(f"Large dataset ({dataset_size} rows) - attempting GPU acceleration")
         
         # Convert to numpy for GPU processing
@@ -86,7 +86,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
             maximum_values = df_numeric.max()
     else:
         # For smaller datasets, use CPU-based calculation
-        print(f"Small dataset ({dataset_size} rows) - using CPU-based calculation")
+        #print(f"Small dataset ({dataset_size} rows) - using CPU-based calculation")
         average_values = df_numeric.mean()
         maximum_values = df_numeric.max()
     
@@ -154,6 +154,6 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
 def calculate_statistics(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
     """Backward-compatible wrapper for the accelerated statistics calculation"""
     # Processing strategy: Hardware-accelerated (wrapper function)
-    print("Processing strategy: Hardware-accelerated statistics calculation (backward-compatible wrapper)")
+    #print("Processing strategy: Hardware-accelerated statistics calculation (backward-compatible wrapper)")
     
     return calculate_statistics_accelerated(df, metric_name, file_date_time, start_time, end_time)
