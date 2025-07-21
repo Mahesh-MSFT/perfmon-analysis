@@ -130,9 +130,9 @@ def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int
 
 def file_processor(log_directory: str, metric_names: List[str], baseline_metric_name: str) -> Tuple[pd.DataFrame, Dict]:
     """
-    GPU-accelerated two-phase processor:
-    Phase 1: GPU-accelerated data preparation (steepest fall detection + filtering)
-    Phase 2: GPU batch processing (statistics calculation)
+    Process performance logs to generate statistical analysis:
+    Phase 1: Data preparation (steepest fall detection + filtering)
+    Phase 2: Statistics calculation and aggregation
     """
     
     print("Processing strategy: GPU-accelerated Phase 1 + GPU Phase 2 architecture")
@@ -180,7 +180,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     first_phase2_start = None
     last_phase1_complete = None
     
-    def process_gpu_phase2_immediately(file_result, file_path):
+    def process_metrics_immediately(file_result, file_path):
         """Process GPU Phase 2 for a single file immediately - managed by ThreadPoolExecutor"""
         nonlocal phase2_only_start, first_phase2_start
         
@@ -211,9 +211,9 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     
     # Determine optimal GPU worker count based on system specs
     if hardware.profile.gpu:
-        # Intel Arc GPU with 64 compute units - optimize for parallel GPU Phase 2
-        gpu_compute_units = hardware.profile.gpu.compute_units  # 64 for Intel Arc
-        gpu_memory_gb = hardware.profile.gpu.memory_gb  # 18GB shared
+        # Intel Arc GPU - optimize for parallel GPU Phase 2 (actual compute units detected)
+        gpu_compute_units = hardware.profile.gpu.compute_units  # Real value from OpenCL driver
+        gpu_memory_gb = hardware.profile.gpu.memory_gb  # Real value from OpenCL driver
         
         # Optimal GPU worker count based on performance testing results:
         # - Intel Arc Graphics has 128 execution units (Xe-cores) 
@@ -268,7 +268,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
                         print(f"📋 Phase 1: {completed_files}/{len(csv_file_paths)} files prepared → Starting GPU Phase 2 for {os.path.basename(file_path)}")
                         
                         # 🎯 TRUE STREAMING: Submit GPU Phase 2 to ThreadPoolExecutor immediately
-                        gpu_future = gpu_executor.submit(process_gpu_phase2_immediately, file_result, file_path)
+                        gpu_future = gpu_executor.submit(process_metrics_immediately, file_result, file_path)
                         gpu_phase2_futures.append(gpu_future)
                         
                         # Track when last Phase 1 completes
@@ -415,9 +415,13 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
         print("No statistics data was generated.")
         return pd.DataFrame(), performance_data
 
-# Alias for backward compatibility - now points to the main function
+# Backward compatibility alias
 def file_processor_accelerated(log_directory: str, metric_names: List[str], baseline_metric_name: str) -> Tuple[pd.DataFrame, Dict]:
-    """Backward-compatible wrapper for the main file processor"""
+    """Backward-compatible wrapper for file_processor"""
     print("Processing strategy: GPU-accelerated two-phase architecture (backward-compatible wrapper)")
-    
+    return file_processor(log_directory, metric_names, baseline_metric_name)
+
+# Additional backward compatibility alias  
+def process_performance_logs(log_directory: str, metric_names: List[str], baseline_metric_name: str) -> Tuple[pd.DataFrame, Dict]:
+    """Backward-compatible wrapper for file_processor"""
     return file_processor(log_directory, metric_names, baseline_metric_name)

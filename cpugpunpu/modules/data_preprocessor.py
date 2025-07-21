@@ -232,7 +232,7 @@ def resample_time_series(data: np.ndarray, time_index: pd.DatetimeIndex, freq: s
             return np.array([])
         
         # Single GPU batch processing call instead of many individual calls
-        gpu_results = gpu_processor.process_metrics_parallel(batch_data)
+        gpu_results = gpu_processor.process_metrics(batch_data)
         
         # Extract results
         resampled_values = []
@@ -273,7 +273,7 @@ def calculate_percentage_change(data: np.ndarray, gpu_processor) -> np.ndarray:
             return np.array([])
         
         # Single GPU batch processing call
-        gpu_results = gpu_processor.process_metrics_parallel(pct_change_data)
+        gpu_results = gpu_processor.process_metrics(pct_change_data)
         
         # Extract results in order
         pct_changes = []

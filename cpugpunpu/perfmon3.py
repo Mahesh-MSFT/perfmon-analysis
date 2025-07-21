@@ -11,8 +11,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import hardware detection and processing modules
 from modules.hardware_detector import get_hardware_detector, print_hardware_info
-from modules.convert_blg_to_csv import convert_blg_to_csv_accelerated
-from modules.file_processor import file_processor_accelerated
+from modules.convert_blg_to_csv import convert_blg_to_csv
+from modules.file_processor import file_processor
 
 # Configuration
 log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
@@ -71,7 +71,7 @@ def main():
         print("STEP 1: BLG TO CSV CONVERSION")
         print("="*50)
         
-        conversion_stats = convert_blg_to_csv_accelerated(log_directory)
+        conversion_stats = convert_blg_to_csv(log_directory)
         
         if conversion_stats['total'] == 0:
             print("No BLG files found to process.")
@@ -118,7 +118,7 @@ def main():
         
         print("\n--- Processing with GPU Architecture (GPU Phase 1 + GPU Phase 2) ---")
         start_time_gpu = pd.Timestamp.now()
-        gpu_stats_df, gpu_performance_data = file_processor_accelerated(log_directory, metric_names, baseline_metric_name)
+        gpu_stats_df, gpu_performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
         gpu_duration = (pd.Timestamp.now() - start_time_gpu).total_seconds()
         
         print(f"\n🏆 GPU PROCESSING RESULTS:")

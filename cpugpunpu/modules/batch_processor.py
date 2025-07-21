@@ -70,7 +70,7 @@ class ParallelGPUProcessor:
             print(f"Parallel GPU initialization failed: {e}")
             self.available = False
     
-    def _process_single_metric_gpu(self, args: Tuple[int, np.ndarray, str]) -> Dict[str, Any]:
+    def process_single_metric(self, args: Tuple[int, np.ndarray, str]) -> Dict[str, Any]:
         """Process a single metric on GPU using dedicated queue"""
         queue_id, data, metric_name = args
         
@@ -116,7 +116,7 @@ class ParallelGPUProcessor:
                 'processed_on': 'CPU_Fallback'
             }
     
-    def process_metrics_parallel(self, metric_data_dict: Dict[str, np.ndarray]) -> Dict[str, Dict[str, float]]:
+    def process_metrics(self, metric_data_dict: Dict[str, np.ndarray]) -> Dict[str, Dict[str, float]]:
         """Process multiple metrics in parallel on different GPU cores"""
         
         if not self.available:
@@ -145,7 +145,7 @@ class ParallelGPUProcessor:
         with ThreadPoolExecutor(max_workers=self.max_parallel_jobs) as executor:
             # Submit all metrics for parallel processing
             future_to_metric = {
-                executor.submit(self._process_single_metric_gpu, args): args[2] 
+                executor.submit(self.process_single_metric, args): args[2] 
                 for args in metric_args
             }
             
@@ -181,7 +181,7 @@ class ParallelGPUProcessor:
         
         return results
     
-    def get_gpu_utilization_info(self) -> Dict[str, Any]:
+    def get_utilization_info(self) -> Dict[str, Any]:
         """Get information about GPU utilization setup"""
         return {
             'available': self.available,
@@ -192,13 +192,27 @@ class ParallelGPUProcessor:
             'max_work_group_size': self.device.max_work_group_size if self.device else 0
         }
 
+    # Backward compatibility aliases for old method names
+    def get_gpu_utilization_info(self) -> Dict[str, Any]:
+        """Backward-compatible wrapper for get_utilization_info"""
+        return self.get_utilization_info()
+    
+    def process_metrics_parallel(self, metric_data_dict: Dict[str, np.ndarray]) -> Dict[str, Dict[str, float]]:
+        """Backward-compatible wrapper for process_metrics"""
+        return self.process_metrics(metric_data_dict)
+
 # Global instance for reuse
 _parallel_gpu_processor = None
 _initialization_logged = False
 
-def get_parallel_gpu_processor() -> ParallelGPUProcessor:
-    """Get the singleton parallel GPU processor"""
+def get_batch_processor() -> ParallelGPUProcessor:
+    """Get the singleton batch processor"""
     global _parallel_gpu_processor
     if _parallel_gpu_processor is None:
         _parallel_gpu_processor = ParallelGPUProcessor()
     return _parallel_gpu_processor
+
+# Backward compatibility alias
+def get_parallel_gpu_processor() -> ParallelGPUProcessor:
+    """Backward-compatible wrapper for get_batch_processor"""
+    return get_batch_processor()

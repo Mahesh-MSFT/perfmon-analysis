@@ -16,7 +16,7 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
         return []
     
     gpu_processor = get_parallel_gpu_processor()
-    gpu_info = gpu_processor.get_gpu_utilization_info()
+    gpu_info = gpu_processor.get_utilization_info()
     
     
     all_statistics_list = []
@@ -62,7 +62,7 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
         file_start_time = time.time()
         
         # Process ALL metrics for this file in parallel on GPU
-        parallel_results = gpu_processor.process_metrics_parallel(file_metric_data)
+        parallel_results = gpu_processor.process_metrics(file_metric_data)
         
         file_end_time = time.time()
         file_duration = file_end_time - file_start_time
@@ -162,7 +162,7 @@ def benchmark_processing_methods(metric_names: List[str], sample_data_size: int 
     
     # Get GPU processor
     gpu_processor = get_parallel_gpu_processor()
-    gpu_info = gpu_processor.get_gpu_utilization_info()
+    gpu_info = gpu_processor.get_utilization_info()
     
     print(f"\nGPU Configuration:")
     print(f"  Device: {gpu_info['device_name']}")
@@ -186,7 +186,7 @@ def benchmark_processing_methods(metric_names: List[str], sample_data_size: int 
     # Parallel GPU processing
     print(f"\n--- Parallel GPU Processing ---")
     gpu_start = time.time()
-    gpu_results = gpu_processor.process_metrics_parallel(metric_data_dict)
+    gpu_results = gpu_processor.process_metrics(metric_data_dict)
     gpu_end = time.time()
     gpu_duration = gpu_end - gpu_start
     

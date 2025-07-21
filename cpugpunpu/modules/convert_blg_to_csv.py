@@ -45,7 +45,7 @@ def estimate_workload_size(blg_files: List[str]) -> float:
     
     return total_size / (1024**3)
 
-def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
+def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
     """
     CPU-based BLG to CSV conversion using optimal CPU worker allocation.
     Uses relog.exe system utility with parallel processing for I/O-bound tasks.
@@ -126,7 +126,11 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
         'throughput': total_files/duration if duration > 0 else 0
     }
 
-# Alias for backward compatibility
-def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
-    """Backward-compatible wrapper for the CPU-based conversion function"""
-    return convert_blg_to_csv_accelerated(log_dir)
+# Backward compatibility aliases
+def convert_performance_logs(log_dir: str) -> Dict[str, int]:
+    """Backward-compatible wrapper for convert_blg_to_csv"""
+    return convert_blg_to_csv(log_dir)
+
+def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
+    """Backward-compatible wrapper for convert_blg_to_csv"""
+    return convert_blg_to_csv(log_dir)

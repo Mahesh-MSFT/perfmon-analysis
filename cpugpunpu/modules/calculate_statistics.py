@@ -23,7 +23,7 @@ def remove_first_word_after_backslashes(column_name: str) -> str:
     from modules.remove_first_word_after_backslashes import remove_first_word_after_backslashes as cpu_remove_first_word
     return cpu_remove_first_word(column_name)
 
-def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
+def calculate_statistics(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
     """
     Hardware-accelerated statistics calculation with intelligent processing strategy selection.
     
@@ -76,7 +76,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
         metric_data_dict = {metric_name: numeric_data}
         
         # Process using parallel GPU processor
-        gpu_results = gpu_processor.process_metrics_parallel(metric_data_dict)
+        gpu_results = gpu_processor.process_metrics(metric_data_dict)
         
         if metric_name in gpu_results:
             result = gpu_results[metric_name]
@@ -135,10 +135,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
     
     return statistics_df
 
-# Alias for backward compatibility
-def calculate_statistics(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
-    """Backward-compatible wrapper for the accelerated statistics calculation"""
-    # Processing strategy: Hardware-accelerated (wrapper function)
-    #print("Processing strategy: Hardware-accelerated statistics calculation (backward-compatible wrapper)")
-    
-    return calculate_statistics_accelerated(df, metric_name, file_date_time, start_time, end_time)
+# Backward compatibility alias
+def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
+    """Backward-compatible wrapper for calculate_statistics"""
+    return calculate_statistics(df, metric_name, file_date_time, start_time, end_time)

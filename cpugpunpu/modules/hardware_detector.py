@@ -124,7 +124,39 @@ class HardwareDetector:
         )
     
     def _detect_gpu_capabilities(self) -> Optional[GPUCapabilities]:
-        """Detect GPU capabilities using Windows commands"""
+        """Detect GPU capabilities using OpenCL and Windows commands for consistent reporting"""
+        gpu_name = None
+        driver_version = 'Unknown'
+        compute_units = 64  # Default fallback
+        memory_gb = 18.0   # Default fallback
+        
+        # First, try to get accurate GPU compute units from OpenCL
+        try:
+            import pyopencl as cl
+            platforms = cl.get_platforms()
+            
+            for platform in platforms:
+                if 'Intel' in platform.name:
+                    devices = platform.get_devices(cl.device_type.GPU)
+                    if devices:
+                        device = devices[0]
+                        compute_units = device.max_compute_units  # Get real compute units from driver
+                        gpu_name = device.name.strip()
+                        # Try to get memory info from OpenCL (may not be available)
+                        try:
+                            global_mem_size = device.global_mem_size
+                            memory_gb = global_mem_size / (1024**3)
+                        except:
+                            memory_gb = 18.0  # Keep fallback
+                        break
+        except ImportError:
+            # OpenCL not available, continue with Windows detection
+            pass
+        except Exception:
+            # OpenCL detection failed, continue with Windows detection  
+            pass
+        
+        # Get GPU name and driver info using Windows commands
         try:
             # Try to get GPU info using wmic
             cmd = ['wmic', 'path', 'win32_VideoController', 'get', 'Name,AdapterRAM,DriverVersion', '/format:list']
@@ -144,13 +176,16 @@ class HardwareDetector:
                 if 'Name' in gpu_info and gpu_info['Name']:
                     name = gpu_info['Name']
                     if any(keyword in name.lower() for keyword in ['intel', 'arc', 'iris', 'uhd', 'graphics']):
+                        gpu_name = gpu_name or name  # Use OpenCL name if available, otherwise Windows name
+                        driver_version = gpu_info.get('DriverVersion', driver_version)
+                        
                         return GPUCapabilities(
-                            name=name,
-                            memory_gb=18.0,  # Your system's shared GPU memory
-                            compute_units=64,  # Intel Arc cores
+                            name=gpu_name,
+                            memory_gb=memory_gb,
+                            compute_units=compute_units,  # Use real compute units from OpenCL
                             api_support=['OpenCL', 'DirectX', 'DirectML'],
                             shared_memory=True,
-                            driver_version=gpu_info.get('DriverVersion', 'Unknown')
+                            driver_version=driver_version
                         )
             
             # Alternative: Check for GPU using PowerShell
@@ -163,13 +198,15 @@ class HardwareDetector:
                 for line in lines:
                     if 'Name' in line and 'Intel' in line:
                         name = line.split(':', 1)[1].strip() if ':' in line else 'Intel Graphics'
+                        gpu_name = gpu_name or name  # Use OpenCL name if available
+                        
                         return GPUCapabilities(
-                            name=name,
-                            memory_gb=18.0,
-                            compute_units=64,
+                            name=gpu_name,
+                            memory_gb=memory_gb,
+                            compute_units=compute_units,  # Use real compute units from OpenCL
                             api_support=['OpenCL', 'DirectX', 'DirectML'],
                             shared_memory=True,
-                            driver_version='Unknown'
+                            driver_version=driver_version
                         )
             
             return None

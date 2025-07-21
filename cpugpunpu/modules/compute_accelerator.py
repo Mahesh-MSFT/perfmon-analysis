@@ -68,7 +68,7 @@ class GPUAccelerator:
         if not self.cupy_available and not self.cudf_available and not self.opencl_available:
             print("Processing strategy: CPU-based (no GPU libraries available)")
     
-    def accelerated_mean(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
+    def calculate_mean(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
         """GPU-accelerated mean calculation with CPU fallback"""
         if self.cupy_available:
             try:
@@ -92,7 +92,7 @@ class GPUAccelerator:
         print("Processing strategy: CPU-based mean calculation")
         return np.nanmean(data, axis=axis)
     
-    def accelerated_max(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
+    def calculate_max(self, data: np.ndarray, axis: int = 0) -> np.ndarray:
         """GPU-accelerated max calculation with CPU fallback"""
         if self.cupy_available:
             try:
@@ -116,7 +116,7 @@ class GPUAccelerator:
         print("Processing strategy: CPU-based max calculation")
         return np.nanmax(data, axis=axis)
     
-    def accelerated_percentage_change(self, data: np.ndarray) -> np.ndarray:
+    def calculate_percentage_change(self, data: np.ndarray) -> np.ndarray:
         """GPU-accelerated percentage change calculation with CPU fallback"""
         if self.cupy_available:
             try:
@@ -144,7 +144,7 @@ class GPUAccelerator:
             pct_changes = np.abs(np.diff(data) / data[:-1]) * 100
         return pct_changes
     
-    def accelerated_dataframe_operations(self, df: pd.DataFrame, operation: str) -> pd.DataFrame:
+    def process_dataframe(self, df: pd.DataFrame, operation: str) -> pd.DataFrame:
         """GPU-accelerated dataframe operations with CPU fallback"""
         if self.cudf_available and len(df) > 50000:
             try:
@@ -185,21 +185,38 @@ class GPUAccelerator:
 # Global GPU accelerator instance
 _gpu_accelerator = None
 
-def get_gpu_accelerator() -> GPUAccelerator:
+def get_compute_accelerator() -> GPUAccelerator:
     """Get singleton GPU accelerator instance"""
     global _gpu_accelerator
     if _gpu_accelerator is None:
         _gpu_accelerator = GPUAccelerator()
     return _gpu_accelerator
 
+def calculate_mean(data: np.ndarray, axis: int = 0) -> np.ndarray:
+    """Calculate mean using compute acceleration"""
+    return get_compute_accelerator().calculate_mean(data, axis)
+
+def calculate_max(data: np.ndarray, axis: int = 0) -> np.ndarray:
+    """Calculate maximum using compute acceleration"""
+    return get_compute_accelerator().calculate_max(data, axis)
+
+def calculate_percentage_change(data: np.ndarray) -> np.ndarray:
+    """Calculate percentage change using compute acceleration"""
+    return get_compute_accelerator().calculate_percentage_change(data)
+
+# Backward compatibility aliases
+def get_gpu_accelerator() -> GPUAccelerator:
+    """Backward-compatible wrapper for get_compute_accelerator"""
+    return get_compute_accelerator()
+
 def gpu_accelerated_mean(data: np.ndarray, axis: int = 0) -> np.ndarray:
-    """Convenience function for GPU-accelerated mean"""
-    return get_gpu_accelerator().accelerated_mean(data, axis)
+    """Backward-compatible wrapper for calculate_mean"""
+    return calculate_mean(data, axis)
 
 def gpu_accelerated_max(data: np.ndarray, axis: int = 0) -> np.ndarray:
-    """Convenience function for GPU-accelerated max"""
-    return get_gpu_accelerator().accelerated_max(data, axis)
+    """Backward-compatible wrapper for calculate_max"""
+    return calculate_max(data, axis)
 
 def gpu_accelerated_percentage_change(data: np.ndarray) -> np.ndarray:
-    """Convenience function for GPU-accelerated percentage change"""
-    return get_gpu_accelerator().accelerated_percentage_change(data)
+    """Backward-compatible wrapper for calculate_percentage_change"""
+    return calculate_percentage_change(data)
