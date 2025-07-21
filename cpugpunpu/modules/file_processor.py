@@ -24,6 +24,80 @@ def detect_time_column(perfmon_data):
     
     raise ValueError("No time column found in the CSV data")
 
+def process_single_file(args):
+    """
+    Phase 1: GPU-accelerated data preparation.
+    Find steepest fall and filter perfmon data using GPU acceleration.
+    """
+    file_path, baseline_metric_name = args
+    
+    try:
+        # Processing strategy: GPU-accelerated data preparation
+        print(f"Phase 1 (GPU-accelerated) - Data prep: {os.path.basename(file_path)}")
+        
+        file_start_time = pd.Timestamp.now()
+        
+        # Load the full file once to find steepest fall
+        perfmon_data = pd.read_csv(file_path, low_memory=False)
+        
+        if perfmon_data.empty:
+            print(f"No data found in file: {file_path}")
+            return None
+        
+        # Detect the actual time column
+        time_column = detect_time_column(perfmon_data)
+        
+        # Convert time column to datetime if it's not already
+        if not pd.api.types.is_datetime64_any_dtype(perfmon_data[time_column]):
+            perfmon_data[time_column] = pd.to_datetime(perfmon_data[time_column])
+        
+        # Filter the DataFrame to only the needed columns before calling find_steepest_fall
+        baseline_columns = [col for col in perfmon_data.columns if baseline_metric_name in col]
+        if baseline_columns:
+            small_df = perfmon_data[[time_column] + baseline_columns[:1]]
+            
+            # GPU-accelerated steepest fall detection
+            from modules.find_steepest_fall import find_steepest_fall
+            steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(
+                small_df, baseline_metric_name, time_column
+            )
+        
+        if not (steepest_fall_time and steepest_fall_value):
+            print(f"No steepest fall found for {baseline_metric_name} in {file_path}")
+            del perfmon_data
+            return None
+        
+        # Extract date/time info
+        file_date_time = steepest_fall_time.strftime('%d-%b')
+        start_time = perfmon_data[time_column].min().strftime('%H:%M')
+        
+        # GPU-accelerated filtering - keep data from steepest fall time onwards
+        filtered_perfmon_data = perfmon_data[perfmon_data[time_column] >= steepest_fall_time].copy()
+        
+        # Clear original data to free memory
+        del perfmon_data
+        gc.collect()
+        
+        file_end_time = pd.Timestamp.now()
+        file_duration = (file_end_time - file_start_time).total_seconds()
+        print(f"Phase 1 (GPU) complete: {os.path.basename(file_path)} - {len(filtered_perfmon_data)} rows in {file_duration:.2f}s")
+        
+        # Return structured data for Phase 2
+        return {
+            'file_path': file_path,
+            'filtered_data': filtered_perfmon_data,
+            'time_column': time_column,
+            'steepest_fall_time': steepest_fall_time,
+            'file_date_time': file_date_time,
+            'start_time': start_time
+        }
+        
+    except Exception as e:
+        print(f"Error in GPU-accelerated Phase 1 for file {file_path}: {e}")
+        # Return None to indicate processing failure
+        print(f"Skipping {file_path} due to GPU processing error")
+        return None
+
 def collect_csv_files(log_directory: str) -> List[str]:
     """Collect all CSV files from the log directory."""
     csv_file_paths = []
@@ -137,7 +211,7 @@ def process_single_file_phase2(file_result, file_path, metric_names, baseline_me
         
         print(f"  📊 Pre-filtered: {len(filtered_perfmon_data.columns)} → {len(relevant_columns)} columns ({len(metric_names)} metrics requested)")
         
-        from modules.metrics_processor import process_file_metrics
+        from modules.gpu_processor import process_file_metrics
         single_file_stats = process_file_metrics([filtered_file_result], metric_names, baseline_metric_name)
         
         if single_file_stats:
