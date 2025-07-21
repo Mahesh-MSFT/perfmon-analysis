@@ -62,8 +62,8 @@ class ParallelGPUProcessor:
             if not _initialization_logged:
                 print(f"Parallel GPU initialized: {self.device.name}")
                 print(f"Compute Units: {compute_units}, Max Work Group Size: {max_work_group_size}")
-                print(f"Parallel GPU Queues: {len(self.queues)}")
-                print(f"Max Parallel Jobs: {self.max_parallel_jobs}")
+                print(f"OpenCL Command Queues: {len(self.queues)} (for parallel metric processing)")
+                print(f"Max Concurrent Metrics: {self.max_parallel_jobs}")
                 _initialization_logged = True
             
         except Exception as e:
