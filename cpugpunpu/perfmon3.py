@@ -40,51 +40,34 @@ def choose_processing_strategy() -> str:
     hardware = get_hardware_detector()
     
     if hardware.profile.gpu:
-        return 'gpu_only'
+        return 'gpu_accelerated'
     else:
         return 'gpu_fallback'
 
 def main():
     """Main execution function - Hardware-accelerated BLG conversion and CSV processing"""
     
-    print("PERFMON3 - Hardware-accelerated BLG conversion and CSV processing")
-    print(f"Log directory: {log_directory}")
-    
-    # Print hardware information
-    print_hardware_info()
-    
-    # Validate hardware requirements
-    if not validate_hardware_requirements():
-        print("System does not meet minimum hardware requirements!")
-        return
-    
-    # Choose processing strategy
-    strategy = choose_processing_strategy()
-    print(f"Processing strategy: {strategy}")
-    
-    # Record start time
+    # Log Start Date and Time
     start_time = pd.Timestamp.now()
+    print("Script started at:", start_time)
     
     try:
-        # Step 1: Hardware-accelerated BLG to CSV conversion
-        print("\n" + "="*50)
-        print("STEP 1: BLG TO CSV CONVERSION")
-        print("="*50)
+        # Hardware validation
+        if not validate_hardware_requirements():
+            print("WARNING: System may not meet minimum requirements for optimal performance")
         
-        conversion_stats = convert_blg_to_csv(log_directory)
+        # Hardware detection and display
+        hardware = get_hardware_detector()
+        print_hardware_info()
         
-        if conversion_stats['total'] == 0:
-            print("No BLG files found to process.")
-            return
+        # Choose processing strategy
+        strategy = choose_processing_strategy()
+        print(f"Processing strategy: {strategy}")
         
-        print(f"Conversion completed: {conversion_stats['converted']} files converted")
+        # Convert .blg files to .csv files
+        convert_blg_to_csv(log_directory)
         
-        # Step 2: Hardware-accelerated CSV processing
-        print("\n" + "="*50)
-        print("STEP 2: CSV FILE PROCESSING")
-        print("="*50)
-        
-        # Define metrics to analyze (same as perfmon2)
+        # Define metrics to process (same as perfmon2 for consistency)
         metric_names = ['Request Execution Time',
                  '# of Exceps Thrown', 
                  '# of current logical Threads',
@@ -113,37 +96,11 @@ def main():
         
         baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'  # Same as perfmon2
         
-        # GPU-accelerated processing
-        print("\n� GPU-ACCELERATED PROCESSING �")
-        
-        print("\n--- Processing with GPU Architecture (GPU Phase 1 + GPU Phase 2) ---")
-        start_time_gpu = pd.Timestamp.now()
-        gpu_stats_df, gpu_performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
-        gpu_duration = (pd.Timestamp.now() - start_time_gpu).total_seconds()
-        
-        print(f"\n🏆 GPU PROCESSING RESULTS:")
-        print(f"════════════════════════════════════════════════════════")
-        print(f"📊 GPU ARCHITECTURE (GPU + GPU):")
-        print(f"   ⏱️  Total Elapsed Time: {gpu_duration:.2f}s")
-        print(f"   🔄  Phase 1 Duration: {gpu_performance_data.get('phase1_duration', 0):.2f}s")
-        print(f"   🎯  Phase 2 Duration: {gpu_performance_data.get('phase2_duration', 0):.2f}s")
-        print(f"   ⚡  Overlap Duration: {gpu_performance_data.get('overlap_duration', 0):.2f}s")
-        print(f"   📈  Statistics Generated: {gpu_performance_data.get('statistics_generated', 0)}")
-        print(f"   �  Processing Rate: {gpu_performance_data.get('gpu_processing_rate', 0):.1f} stats/sec")
-        if gpu_performance_data.get('overlap_duration', 0) > 0:
-            overlap_pct_gpu = (gpu_performance_data.get('overlap_duration', 0) / gpu_performance_data.get('phase1_duration', 1)) * 100
-            print(f"   �  Streaming Efficiency: {overlap_pct_gpu:.1f}% overlap")
-        else:
-            print(f"   ⚠️  No streaming overlap detected")
-        print(f"════════════════════════════════════════════════════════")
-        
-        # Use the GPU results
-        statistics_df = gpu_stats_df
-        print("\n⚡ GPU PROCESSING COMPLETE - Results ready")
+        # Process the CSV files
+        statistics_df, performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
         
         if not statistics_df.empty:
             print(f"Statistics calculated for {len(statistics_df)} metrics")
-            print(f"Columns: {list(statistics_df.columns)}")
         else:
             print("No statistics data was generated.")
         
@@ -162,8 +119,8 @@ def main():
     minutes = int(total_seconds // 60)
     seconds = total_seconds % 60
     
-    print(f"\nTotal elapsed time: {minutes} minutes and {seconds:.2f} seconds")
-    print("Hardware-accelerated processing complete.")
+    print("Script completed at:", end_time)
+    print(f"Total elapsed time: {minutes} minutes and {seconds:.2f} seconds")
 
 if __name__ == '__main__':
     main()

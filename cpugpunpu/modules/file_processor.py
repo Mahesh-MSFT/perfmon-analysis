@@ -11,7 +11,6 @@ from modules.hardware_detector import get_hardware_detector
 
 def detect_time_column(perfmon_data):
     """Detect the time column in the CSV data."""
-    print("   🔍 GPU-accelerated time column detection")
     
     for column in perfmon_data.columns:
         if (column.startswith('(PDH-CSV 4.0) (') and 
@@ -33,7 +32,7 @@ def process_single_file(args):
     
     try:
         # Processing strategy: GPU-accelerated data preparation
-        print(f"Phase 1 (GPU-accelerated) - Data prep: {os.path.basename(file_path)}")
+        print(f"Processing file: {os.path.basename(file_path)}")
         
         file_start_time = pd.Timestamp.now()
         
@@ -80,7 +79,7 @@ def process_single_file(args):
         
         file_end_time = pd.Timestamp.now()
         file_duration = (file_end_time - file_start_time).total_seconds()
-        print(f"Phase 1 (GPU) complete: {os.path.basename(file_path)} - {len(filtered_perfmon_data)} rows in {file_duration:.2f}s")
+        print(f"File {os.path.basename(file_path)} completed in {file_duration:.2f} seconds")
         
         # Return structured data for Phase 2
         return {
@@ -93,9 +92,8 @@ def process_single_file(args):
         }
         
     except Exception as e:
-        print(f"Error in GPU-accelerated Phase 1 for file {file_path}: {e}")
+        print(f"Error processing file {file_path}: {e}")
         # Return None to indicate processing failure
-        print(f"Skipping {file_path} due to GPU processing error")
         return None
 
 def collect_csv_files(log_directory: str) -> List[str]:
@@ -136,34 +134,18 @@ def print_gpu_configuration(optimal_gpu_workers: int):
     """Print GPU processing configuration details."""
     hardware = get_hardware_detector()
     
-    if hardware.profile.gpu:
-        gpu_compute_units = hardware.profile.gpu.compute_units
-        gpu_memory_gb = hardware.profile.gpu.memory_gb
-        
-        print(f"🎯 Phase 2 GPU Processing Configuration:")
-        print(f"   GPU Hardware: {hardware.profile.gpu.name}")
-        print(f"   Compute Units: {gpu_compute_units}, Memory: {gpu_memory_gb:.1f}GB")
-        print(f"   File Processing Workers: {optimal_gpu_workers} (processes files in parallel)")
-        print(f"   Metric Processing Queues: 32 per worker (processes metrics in parallel within each file)")
-    else:
-        print("⚠️ GPU not detected, using fallback: 4 workers")
+    if not hardware.profile.gpu:
+        print("GPU not detected, using fallback: 4 workers")
+        return
+    
+    print(f"Using {optimal_gpu_workers} workers for parallel processing")
 
 def print_pipeline_architecture(optimal_gpu_workers: int):
     """Print the pipeline architecture explanation."""
-    print(f"\\n🚀 Starting STREAMING PIPELINE:")
-    print(f"   Phase 1: GPU-accelerated data preparation")
-    print(f"   Phase 2: GPU statistics processing")
-    print(f"   Pipeline: Phase 1 → Immediate Phase 2 streaming")
-    print(f"")
-    print(f"📋 Three-Level GPU Parallelism Architecture:")
-    print(f"   🔸 File Level: {optimal_gpu_workers} workers process different files simultaneously") 
-    print(f"   🔸 Metric Level: Each file processes 25+ metrics in parallel using 32 OpenCL queues")
-    print(f"   🔸 Compute Level: Each metric uses GPU compute units for statistics calculation")
-    print(f"   🔸 Total GPU Utilization: Up to {optimal_gpu_workers * 32} concurrent metric calculations")
+    print(f"Starting parallel processing with {optimal_gpu_workers} workers...")
 
 def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int]:
-    """GPU worker allocation for two-phase architecture."""
-    print("GPU worker allocation for two-phase architecture")
+    """Calculate optimal workers for parallel processing."""
     
     if not csv_file_paths:
         return {'file_workers': 1}
@@ -177,16 +159,11 @@ def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int
         'total_cpu_cores': total_cpu_cores
     }
     
-    print(f"Phase 1 allocation: {file_workers} GPU workers (CPU cores: {total_cpu_cores})")
-    print(f"Processing {len(csv_file_paths)} files")
-    
     return allocation
 
 def process_single_file_phase2(file_result, file_path, metric_names, baseline_metric_name):
-    """Process GPU Phase 2 for a single file."""
+    """Process Phase 2 for a single file."""
     try:
-        print(f"🚀 GPU Phase 2 starting immediately for {os.path.basename(file_path)}")
-        
         # Pre-filter file data to include only relevant metric columns + time column
         filtered_perfmon_data = file_result['filtered_data']
         time_column = file_result['time_column']
@@ -209,28 +186,22 @@ def process_single_file_phase2(file_result, file_path, metric_names, baseline_me
             'filtered_data': filtered_data_subset
         }
         
-        print(f"  📊 Pre-filtered: {len(filtered_perfmon_data.columns)} → {len(relevant_columns)} columns ({len(metric_names)} metrics requested)")
-        
         from modules.gpu_processor import process_file_metrics
         single_file_stats = process_file_metrics([filtered_file_result], metric_names, baseline_metric_name)
         
         if single_file_stats:
-            print(f"✅ GPU Phase 2 complete for {os.path.basename(file_path)} - {len(single_file_stats)} statistics")
             return single_file_stats
         else:
-            print(f"⚠️ No statistics generated for {os.path.basename(file_path)}")
             return []
             
     except Exception as e:
-        print(f"❌ GPU Phase 2 error for {file_path}: {e}")
+        print(f"Error processing file {file_path}: {e}")
         return []
 
 def execute_phase1(csv_file_paths: List[str], baseline_metric_name: str):
-    """Execute Phase 1: GPU-accelerated data preparation."""
-    print(f"\\n--- Phase 1: GPU-Accelerated Data Preparation ---")
+    """Execute Phase 1: Data preparation."""
     
     hardware_allocation = calculate_hardware_aware_workers(csv_file_paths)
-    print("Using GPU acceleration for Phase 1 data preparation")
     
     phase1_args = [
         (file_path, baseline_metric_name)
@@ -242,7 +213,6 @@ def execute_phase1(csv_file_paths: List[str], baseline_metric_name: str):
 def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Dict[str, int], 
                                optimal_gpu_workers: int, metric_names: List[str], baseline_metric_name: str):
     """Execute the streaming pipeline with Phase 1 and Phase 2 processing."""
-    from modules.data_preprocessor import process_single_file
     
     filtered_file_data = []
     all_statistics_list = []
@@ -255,7 +225,7 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
     phase2_only_end = None
     
     with ProcessPoolExecutor(max_workers=hardware_allocation['file_workers']) as process_executor:
-        with ThreadPoolExecutor(max_workers=optimal_gpu_workers, thread_name_prefix="GPU-Phase2") as gpu_executor:
+        with ThreadPoolExecutor(max_workers=optimal_gpu_workers, thread_name_prefix="Phase2") as gpu_executor:
             
             # Submit Phase 1 tasks
             phase1_futures = {
@@ -276,27 +246,26 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
                     if file_result is not None:
                         filtered_file_data.append(file_result)
                         
-                        print(f"📋 Phase 1: {completed_files}/{len(phase1_args)} files prepared → Starting GPU Phase 2 for {os.path.basename(file_path)}")
+                        print(f"Completed {completed_files}/{len(phase1_args)} files")
                         
                         # Track first Phase 2 start
                         if first_phase2_start is None:
                             first_phase2_start = pd.Timestamp.now()
                         
-                        # Submit GPU Phase 2 task immediately
+                        # Submit Phase 2 task immediately
                         gpu_future = gpu_executor.submit(process_single_file_phase2, file_result, file_path, metric_names, baseline_metric_name)
                         gpu_phase2_futures.append(gpu_future)
                         
                         last_phase1_complete = pd.Timestamp.now()
                     else:
-                        print(f"📋 Phase 1: {completed_files}/{len(phase1_args)} files prepared (skipped due to error)")
+                        print(f"Completed {completed_files}/{len(phase1_args)} files")
                         last_phase1_complete = pd.Timestamp.now()
                 
                 except Exception as e:
-                    print(f"❌ Phase 1 error for file {file_path}: {e}")
+                    print(f"Error processing file {file_path}: {e}")
                     last_phase1_complete = pd.Timestamp.now()
             
-            # Wait for all GPU Phase 2 processing to complete
-            print("⏳ Waiting for all GPU Phase 2 threads to complete...")
+            # Wait for all Phase 2 processing to complete
             phase2_only_start = pd.Timestamp.now()
             
             for gpu_future in as_completed(gpu_phase2_futures):
@@ -305,7 +274,7 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
                     if gpu_stats:
                         all_statistics_list.extend(gpu_stats)
                 except Exception as e:
-                    print(f"❌ Error collecting GPU Phase 2 results: {e}")
+                    print(f"Error collecting Phase 2 results: {e}")
             
             phase2_only_end = pd.Timestamp.now()
     
@@ -335,37 +304,13 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
     return filtered_file_data, all_statistics_list, timing_data
 
 def print_timing_analysis(timing_data: Dict):
-    """Print detailed timing analysis."""
-    print(f"\\n🏁 DETAILED PIPELINE TIMING ANALYSIS:")
-    print(f"   📊 Total Pipeline Duration: {timing_data['total_time']:.2f}s")
-    print(f"   📝 Phase 1 Duration: {timing_data['phase1_duration']:.2f}s")
-    print(f"   🎯 Phase 2 Total Duration: {timing_data['phase2_duration']:.2f}s")
-    print(f"   🔄 Overlap Duration: {timing_data['overlap_duration']:.2f}s")
-    
-    if timing_data['overlap_duration'] > 0:
-        overlap_percentage = (timing_data['overlap_duration'] / timing_data['phase1_duration']) * 100
-        print(f"   📈 Overlap Efficiency: {overlap_percentage:.1f}% of Phase 1 overlapped with Phase 2")
-    else:
-        print(f"   ⚠️ No Overlap: Sequential processing (no streaming benefit)")
-    
-    print(f"🏁 Streaming pipeline analysis complete: {timing_data['files_processed']} files processed")
+    """Print timing analysis."""
+    print(f"Parallel processing completed in {timing_data['total_time']:.2f} seconds")
 
 def print_performance_summary(timing_data: Dict):
     """Print performance summary."""
-    print(f"\\n--- Phase 2: Completed via ThreadPoolExecutor streaming pipeline ---")
-    
-    print(f"\\n💯 ThreadPoolExecutor Streaming Pipeline Complete:")
-    print(f"   📁 Phase 1 processed: {timing_data['files_processed']} files")
-    print(f"   🎯 GPU Phase 2 processed: {timing_data['statistics_generated']} statistics")
-    print(f"   ⚡ Total time: {timing_data['total_time']:.2f}s")
-    print(f"   🚀 Throughput: {timing_data['overall_throughput']:.2f} files/second")
-    print(f"   🔥 Architecture: GPU Phase 1 + ThreadPoolExecutor GPU Phase 2")
-    
-    if timing_data['statistics_generated'] > 0:
-        print(f"\\n📊 PERFORMANCE METRICS (GPU+GPU):")
-        print(f"   🎯 Total Statistics Generated: {timing_data['statistics_generated']}")
-        print(f"   ⚡ GPU Phase 2 Processing Rate: {timing_data['gpu_processing_rate']:.1f} statistics/second")
-        print(f"   🚀 Overall System Throughput: {timing_data['overall_throughput']:.3f} files/second")
+    # Keep minimal output similar to cpuonly
+    pass
 
 def combine_results(all_statistics_list: List, baseline_metric_name: str) -> pd.DataFrame:
     """Combine all statistics results into a single DataFrame."""
@@ -394,12 +339,10 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     """
     Process performance logs to generate statistical analysis.
     
-    Simplified two-phase approach:
-    - Phase 1: GPU-accelerated data preparation (steepest fall detection + filtering)
-    - Phase 2: GPU statistics processing (parallel metric calculation)
+    Two-phase approach:
+    - Phase 1: Data preparation (steepest fall detection + filtering)
+    - Phase 2: Statistics processing (parallel metric calculation)
     """
-    
-    print("Processing strategy: GPU-accelerated Phase 1 + GPU Phase 2 architecture")
     
     # Step 1: Collect CSV files
     csv_file_paths = collect_csv_files(log_directory)
@@ -408,7 +351,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
         print("No CSV files found in the specified directory.")
         return pd.DataFrame(), {}
     
-    print(f"Found {len(csv_file_paths)} CSV files for GPU processing")
+    print(f"Found {len(csv_file_paths)} CSV files to process")
     
     # Step 2: Execute Phase 1 (data preparation)
     phase1_args, hardware_allocation = execute_phase1(csv_file_paths, baseline_metric_name)
@@ -423,7 +366,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
         phase1_args, hardware_allocation, optimal_gpu_workers, metric_names, baseline_metric_name
     )
     
-    # Step 5: Print analysis and performance summary
+    # Step 5: Print timing summary
     print_timing_analysis(timing_data)
     print_performance_summary(timing_data)
     
