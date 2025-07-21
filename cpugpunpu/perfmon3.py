@@ -1,5 +1,5 @@
 # perfmon3.py - Hardware-accelerated BLG conversion
-# Utilizes CPU, GPU, and NPU capabilities for optimal performance
+# Utilizes CPU and GPU capabilities for optimal performance
 
 import os
 import sys
@@ -39,9 +39,7 @@ def choose_processing_strategy() -> str:
     """Choose the optimal processing strategy based on available hardware"""
     hardware = get_hardware_detector()
     
-    if hardware.profile.npu and hardware.profile.gpu:
-        return 'cpu_gpu_npu'
-    elif hardware.profile.gpu:
+    if hardware.profile.gpu:
         return 'cpu_gpu'
     else:
         return 'cpu_only'
@@ -115,8 +113,33 @@ def main():
         
         baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'  # Same as perfmon2
         
-        # Process CSV files with hardware acceleration
-        statistics_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name)
+        # Compare CPU vs GPU Phase 1 processing
+        print("\n� PERFORMANCE COMPARISON: CPU vs GPU Phase 1 �")
+        
+        print("\n--- Testing CPU-only Phase 1 (baseline) ---")
+        start_time_cpu = pd.Timestamp.now()
+        cpu_stats_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name, gpu_phase1=False)
+        cpu_duration = (pd.Timestamp.now() - start_time_cpu).total_seconds()
+        
+        print(f"\n--- Testing GPU-accelerated Phase 1 ---")
+        start_time_gpu = pd.Timestamp.now()
+        gpu_stats_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name, gpu_phase1=True)
+        gpu_duration = (pd.Timestamp.now() - start_time_gpu).total_seconds()
+        
+        # Performance comparison
+        gpu_improvement = ((cpu_duration - gpu_duration) / cpu_duration) * 100
+        
+        print(f"\n🏆 PERFORMANCE RESULTS:")
+        print(f"CPU Phase 1: {cpu_duration:.2f}s (baseline)")
+        print(f"GPU Phase 1: {gpu_duration:.2f}s ({gpu_improvement:+.1f}%)")
+        
+        # Use the better performing approach
+        if gpu_improvement > 0:
+            statistics_df = gpu_stats_df
+            print("⚡ GPU Phase 1 provides best performance - using GPU results")
+        else:
+            statistics_df = cpu_stats_df
+            print("💻 CPU Phase 1 provides best performance - using CPU results")
         
         if not statistics_df.empty:
             print(f"Statistics calculated for {len(statistics_df)} metrics")

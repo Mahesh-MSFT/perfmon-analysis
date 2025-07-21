@@ -1,5 +1,5 @@
 # Hardware-accelerated steepest fall detection for perfmon3.py
-# Utilizes CPU, GPU, and NPU capabilities for optimal time series analysis
+# Phase 1: CPU-only processing for two-phase architecture
 
 import pandas as pd
 import numpy as np
@@ -7,7 +7,7 @@ from typing import Tuple, Optional, Union
 
 def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, time_column: Optional[str] = None) -> Tuple[Optional[pd.Timestamp], Optional[float], Optional[str]]:
     """
-    Hardware-accelerated steepest fall detection with intelligent processing strategy selection.
+    Phase 1: CPU-only steepest fall detection for two-phase architecture.
     
     Args:
         df: Performance monitor DataFrame
@@ -17,7 +17,7 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
     Returns:
         Tuple of (steepest_fall_time, steepest_fall_value, column_name)
     """
-    # Processing strategy: Hardware-accelerated time series analysis
+    # Processing strategy: Phase 1 CPU-only processing
     print(f"Processing strategy: Hardware-accelerated steepest fall detection for {specific_metric_name}")
     
     if df.empty:
@@ -69,21 +69,9 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
     # Calculate the minimum value of the original DataFrame, considering only non-zero values
     min_value_df = non_zero_values.min()
     
-    # Hardware-accelerated time series resampling
-    # For large datasets, this could benefit from GPU acceleration
-    if len(df) > 10000:  # Threshold for considering hardware acceleration
-        print(f"Large dataset ({len(df)} rows) - using GPU-accelerated time series processing")
-        
-        # Use GPU-accelerated operations for large datasets
-        from modules.gpu_accelerator import get_gpu_accelerator
-        gpu_accelerator = get_gpu_accelerator()
-        
-        # Resample using pandas (GPU doesn't help with time-based grouping)
-        # But we can GPU-accelerate the mean calculation within each group
-        resampled_df = df[metric_column].resample('5min').mean()
-    else:
-        # For smaller datasets, use pandas (sufficient performance)
-        resampled_df = df[metric_column].resample('5min').mean()
+    # Phase 1: CPU-only time series resampling (no GPU in Phase 1)
+    # Use pandas for consistent CPU-only processing in Phase 1
+    resampled_df = df[metric_column].resample('5min').mean()
     
     # Filter the resampled DataFrame to include only non-zero mean values
     resampled_df = resampled_df[resampled_df != 0]
@@ -98,24 +86,9 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
     # Convert resampled_df to a DataFrame
     resampled_df = resampled_df.to_frame(name=metric_column)
     
-    # Hardware-accelerated percentage change calculation
-    # For large datasets, this could use GPU vectorized operations
-    if len(resampled_df) > 1000:
-        print("Using GPU-accelerated percentage change calculation")
-        
-        # Import GPU accelerator for actual GPU usage
-        from modules.gpu_accelerator import get_gpu_accelerator
-        gpu_accelerator = get_gpu_accelerator()
-        
-        # Use GPU-accelerated percentage change calculation
-        values = resampled_df[metric_column].values
-        pct_changes = gpu_accelerator.accelerated_percentage_change(values)
-        
-        # Create the diff column
-        resampled_df['diff'] = np.concatenate([[np.nan], pct_changes])
-    else:
-        # For smaller datasets, use pandas
-        resampled_df['diff'] = resampled_df[metric_column].pct_change().abs() * 100
+    # Phase 1: CPU-only percentage change calculation (consistent with two-phase architecture)
+    # Use pandas for CPU-only processing in Phase 1
+    resampled_df['diff'] = resampled_df[metric_column].pct_change().abs() * 100
     
     # Remove NaN values from diff column
     resampled_df = resampled_df.dropna(subset=['diff'])
@@ -141,6 +114,7 @@ def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, 
         # Get the last time in the time column
         last_time_in_data = df.index.max()
         
+        print(f"CPU Phase 1 - Steepest fall time detected: {steepest_fall_time}")
         return steepest_fall_time, value_before_increase, metric_column
         
     except KeyError as e:

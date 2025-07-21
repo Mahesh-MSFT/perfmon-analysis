@@ -1,14 +1,14 @@
-# Hardware-accelerated file processor for perfmon3.py
-# Utilizes CPU, GPU, and NPU capabilities for optimal CSV processing performance
+# Simplified two-phase file processor for perfmon3.py
+# Phase 1: CPU-only data preparation (steepest fall detection + filtering)
+# Phase 2: GPU batch processing (statistics calculation)
 
 import os
 import pandas as pd
-import psutil
 import gc
 import time
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import List, Dict, Tuple, Any
-from modules.hardware_detector import get_optimal_workers, get_hardware_detector
+from modules.hardware_detector import get_hardware_detector
 
 def detect_time_column(perfmon_data):
     """
@@ -32,43 +32,87 @@ def detect_time_column(perfmon_data):
     
     raise ValueError("No time column found in the CSV data")
 
-def process_single_metric(args):
-    """Process a single metric for a given file with hardware-aware optimization."""
-    metric_filtered_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time = args
+def process_batch_with_gpu(filtered_file_data: List[Dict], metric_names: List[str]) -> List[pd.DataFrame]:
+    """
+    Phase 2: GPU batch processing.
+    Process all filtered data through GPU acceleration in batches.
+    """
+    if not filtered_file_data:
+        return []
     
-    try:
-        # Processing strategy: Hardware-accelerated metric processing
-        #print(f"Processing strategy: Hardware-accelerated metric analysis for {metric_name}")
+    # Processing strategy: GPU batch processing
+    print(f"Phase 2 - GPU batch processing: {len(filtered_file_data)} files, {len(metric_names)} metrics")
+    
+    all_statistics_list = []
+    batch_start_time = pd.Timestamp.now()
+    
+    # Process each file's filtered data
+    for file_data in filtered_file_data:
+        if file_data is None:
+            continue
+            
+        file_path = file_data['file_path']
+        filtered_perfmon_data = file_data['filtered_data']
+        time_column = file_data['time_column']
+        steepest_fall_time = file_data['steepest_fall_time']
+        file_date_time = file_data['file_date_time']
+        start_time = file_data['start_time']
         
-        # Import calculate_statistics here to avoid circular imports
-        from modules.calculate_statistics import calculate_statistics
-        from shared.modules.ensure_consistent_structure import ensure_consistent_structure
+        print(f"GPU processing: {os.path.basename(file_path)} - {len(filtered_perfmon_data)} rows")
         
-        # Calculate statistics for this metric using hardware optimization
-        statistics_df = calculate_statistics(
-            metric_filtered_data, 
-            metric_name, 
-            file_date_time, 
-            start_time, 
-            steepest_fall_time.strftime('%H:%M')
-        )
+        # Pre-filter data per metric for GPU batch processing
+        metric_specific_data = {}
+        for metric_name in metric_names:
+            metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
+            if metric_columns:
+                columns_to_keep = [time_column] + metric_columns
+                metric_specific_data[metric_name] = filtered_perfmon_data[columns_to_keep]
         
-        # Ensure consistent structure
-        statistics_df = ensure_consistent_structure(statistics_df)
+        # Process all metrics for this file using GPU
+        for metric_name, metric_data in metric_specific_data.items():
+            try:
+                # Import calculate_statistics here to avoid circular imports
+                from modules.calculate_statistics import calculate_statistics
+                from shared.modules.ensure_consistent_structure import ensure_consistent_structure
+                
+                # Calculate statistics using GPU acceleration
+                statistics_df = calculate_statistics(
+                    metric_data, 
+                    metric_name, 
+                    file_date_time, 
+                    start_time, 
+                    steepest_fall_time.strftime('%H:%M')
+                )
+                
+                # Ensure consistent structure
+                statistics_df = ensure_consistent_structure(statistics_df)
+                
+                if not statistics_df.empty:
+                    all_statistics_list.append(statistics_df)
+                    
+            except Exception as e:
+                print(f"Error in GPU processing for metric {metric_name}: {e}")
         
-        return statistics_df
-        
-    except Exception as e:
-        print(f"Error processing metric {metric_name}: {e}")
-        return pd.DataFrame()
+        # Clear processed data
+        del metric_specific_data
+        gc.collect()
+    
+    batch_end_time = pd.Timestamp.now()
+    batch_duration = (batch_end_time - batch_start_time).total_seconds()
+    print(f"Phase 2 GPU processing completed in {batch_duration:.2f} seconds")
+    
+    return all_statistics_list
 
 def process_single_file(args):
-    """Process a single CSV file with hardware-accelerated optimization."""
-    file_path, metric_names, baseline_metric_name, hardware_allocation = args
+    """
+    Phase 1: CPU-only data preparation.
+    Find steepest fall and filter perfmon data - no GPU operations.
+    """
+    file_path, baseline_metric_name = args
     
     try:
-        # Processing strategy: Hardware-accelerated file processing
-        print(f"Processing strategy: Hardware-accelerated file processing for {os.path.basename(file_path)}")
+        # Processing strategy: CPU-only data preparation
+        print(f"Phase 1 - Data prep: {os.path.basename(file_path)}")
         
         file_start_time = pd.Timestamp.now()
         
@@ -77,7 +121,7 @@ def process_single_file(args):
         
         if perfmon_data.empty:
             print(f"No data found in file: {file_path}")
-            return []
+            return None
         
         # Detect the actual time column
         time_column = detect_time_column(perfmon_data)
@@ -102,129 +146,80 @@ def process_single_file(args):
         if not (steepest_fall_time and steepest_fall_value):
             print(f"No steepest fall found for {baseline_metric_name} in {file_path}")
             del perfmon_data
-            return []
+            return None
         
         # Extract date/time info
         file_date_time = steepest_fall_time.strftime('%d-%b')
+        start_time = perfmon_data[time_column].min().strftime('%H:%M')
+        
+        # Filter perfmon data up to steepest fall time
         filtered_perfmon_data = perfmon_data[perfmon_data[time_column] <= steepest_fall_time]
-        start_time = filtered_perfmon_data[time_column].min().strftime('%H:%M')
-
+        
         # Clear original data to free memory
         del perfmon_data
-        
-        # Pre-filter data per metric to enable efficient parallel processing
-        metric_specific_data = {}
-        for metric_name in metric_names:
-            metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
-            if metric_columns:
-                columns_to_keep = [time_column] + metric_columns
-                metric_specific_data[metric_name] = filtered_perfmon_data[columns_to_keep]
-        
-        # Clear the large filtered DataFrame immediately
-        del filtered_perfmon_data
-        gc.collect()
-        
-        # Prepare arguments for parallel metric processing
-        metric_args = [
-            (metric_data, time_column, metric_name, steepest_fall_time, file_date_time, start_time)
-            for metric_name, metric_data in metric_specific_data.items()
-        ]
-        
-        # Use hardware-aware worker allocation for metric processing
-        metric_workers = min(len(metric_names), hardware_allocation['cpu_per_file'])
-        
-        print(f"Using {metric_workers} workers for {len(metric_args)} metrics in {os.path.basename(file_path)}")
-        
-        # Process metrics in parallel with hardware optimization
-        statistics_list = []
-        with ThreadPoolExecutor(max_workers=metric_workers) as executor:
-            future_to_metric = {
-                executor.submit(process_single_metric, args): args[2]  # args[2] is metric_name
-                for args in metric_args
-            }
-            
-            for future in as_completed(future_to_metric):
-                metric_name = future_to_metric[future]
-                try:
-                    result = future.result()
-                    if not result.empty:
-                        statistics_list.append(result)
-                except Exception as e:
-                    print(f"Error processing metric {metric_name}: {e}")
-        
-        # Clear metric-specific data and force garbage collection
-        del metric_specific_data
         gc.collect()
         
         file_end_time = pd.Timestamp.now()
         file_duration = (file_end_time - file_start_time).total_seconds()
-        print(f"File {os.path.basename(file_path)} completed in {file_duration:.2f} seconds")
+        print(f"Phase 1 complete: {os.path.basename(file_path)} - {len(filtered_perfmon_data)} rows in {file_duration:.2f}s")
         
-        return statistics_list
+        # Return structured data for Phase 2
+        return {
+            'file_path': file_path,
+            'filtered_data': filtered_perfmon_data,
+            'time_column': time_column,
+            'steepest_fall_time': steepest_fall_time,
+            'file_date_time': file_date_time,
+            'start_time': start_time
+        }
         
     except Exception as e:
-        print(f"Error processing file {file_path}: {e}")
-        return []
+        print(f"Error in Phase 1 for file {file_path}: {e}")
+        return None
 
 def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int]:
     """
-    Calculate optimal number of workers based on hardware capabilities and file characteristics.
-    Returns hardware-aware worker allocation.
+    Calculate optimal number of workers for Phase 1 (CPU-only file processing).
+    Simplified for two-phase architecture.
     """
-    # Processing strategy: Hardware-accelerated worker allocation
-    print("Processing strategy: Hardware-accelerated worker allocation calculation")
+    # Processing strategy: Simplified worker allocation for two-phase architecture
+    print("Processing strategy: Simplified worker allocation for two-phase architecture")
     
     if not csv_file_paths:
-        return {'file_workers': 1, 'cpu_per_file': 1}
+        return {'file_workers': 1}
     
-    # Get hardware detector for intelligent allocation
+    # Get hardware detector
     hardware = get_hardware_detector()
     
-    # Estimate workload size
-    sample_size = min(3, len(csv_file_paths))
-    total_sample_size = 0
-    
-    for i in range(sample_size):
-        try:
-            file_size_gb = os.path.getsize(csv_file_paths[i]) / (1024**3)
-            total_sample_size += file_size_gb
-        except OSError:
-            total_sample_size += 1.0  # Conservative estimate
-    
-    avg_file_size_gb = total_sample_size / sample_size if sample_size > 0 else 1.0
-    total_workload_gb = avg_file_size_gb * len(csv_file_paths)
-    
-    # Get optimal worker allocation for CPU-intensive tasks
-    worker_allocation = get_optimal_workers('cpu_bound', total_workload_gb)
-    
-    # Calculate file-level and metric-level workers
-    file_workers = min(len(csv_file_paths), worker_allocation['cpu'])
-    
-    # Allocate remaining CPU cores for metric processing within each file
+    # Simple file worker calculation - one worker per file up to CPU limit
     total_cpu_cores = hardware.profile.cpu.cores
-    cpu_per_file = max(1, total_cpu_cores // file_workers)
+    file_workers = min(len(csv_file_paths), max(1, total_cpu_cores // 2))  # Use half cores for file processing
     
     allocation = {
         'file_workers': file_workers,
-        'cpu_per_file': cpu_per_file,
-        'total_cpu_cores': total_cpu_cores,
-        'gpu_cores': worker_allocation.get('gpu', 0),
-        'npu_tops': worker_allocation.get('npu', 0)
+        'total_cpu_cores': total_cpu_cores
     }
     
-    print(f"Hardware allocation: {file_workers} file workers, {cpu_per_file} CPU cores per file")
-    print(f"Total workload: {total_workload_gb:.1f}GB across {len(csv_file_paths)} files")
+    print(f"Phase 1 allocation: {file_workers} file workers (CPU cores: {total_cpu_cores})")
+    print(f"Processing {len(csv_file_paths)} files")
     
     return allocation
 
-def file_processor_accelerated(log_directory: str, metric_names: List[str], baseline_metric_name: str) -> pd.DataFrame:
+def file_processor_accelerated(log_directory: str, metric_names: List[str], baseline_metric_name: str, gpu_phase1: bool = False) -> pd.DataFrame:
     """
-    Hardware-accelerated file processor with intelligent worker allocation.
-    Processes CSV files in parallel with CPU+GPU+NPU optimization.
+    Optimized two-phase processor:
+    Phase 1: CPU-only OR GPU-accelerated data preparation (steepest fall detection + filtering)
+    Phase 2: Batch GPU processing (statistics calculation)
+    
+    Args:
+        gpu_phase1: If True, use GPU acceleration for Phase 1 data preparation
     """
     
-    # Processing strategy: Hardware-accelerated file processing orchestration
-    print("Processing strategy: Hardware-accelerated file processing orchestration")
+    # Processing strategy based on acceleration flags
+    if gpu_phase1:
+        print("Processing strategy: GPU-accelerated Phase 1 + GPU Phase 2 architecture")
+    else:
+        print("Processing strategy: Optimized two-phase architecture (CPU prep → GPU batch)")
     
     # Collect all CSV files
     csv_file_paths = []
@@ -238,27 +233,43 @@ def file_processor_accelerated(log_directory: str, metric_names: List[str], base
         print("No CSV files found in the specified directory.")
         return pd.DataFrame()
     
-    print(f"Found {len(csv_file_paths)} CSV files to process")
+    processing_type = "GPU-accelerated" if gpu_phase1 else "optimized"
+    print(f"Found {len(csv_file_paths)} CSV files for {processing_type} processing")
     
-    # Calculate hardware-aware worker allocation
+    # ==================== PHASE 1: Data preparation ====================
+    if gpu_phase1:
+        phase1_type = "GPU-Accelerated"
+    else:
+        phase1_type = "CPU"
+    
+    print(f"\n--- Phase 1: {phase1_type} Data Preparation ---")
+    phase1_start_time = pd.Timestamp.now()
+    
+    # Calculate optimal workers for Phase 1
     hardware_allocation = calculate_hardware_aware_workers(csv_file_paths)
     
-    # Prepare arguments for parallel file processing
-    file_args = [
-        (file_path, metric_names, baseline_metric_name, hardware_allocation)
+    # Choose processing function based on acceleration flags
+    if gpu_phase1:
+        from modules.gpu_phase1_processor import process_single_file_gpu_accelerated
+        process_function = process_single_file_gpu_accelerated
+        print("Using GPU acceleration for Phase 1 data preparation")
+    else:
+        process_function = process_single_file
+        print("Using CPU-only processing for Phase 1 data preparation")
+    
+    # Prepare arguments for Phase 1
+    phase1_args = [
+        (file_path, baseline_metric_name)
         for file_path in csv_file_paths
     ]
     
-    # Process files in parallel with hardware acceleration
-    all_statistics_list = []
-    
-    print(f"Starting hardware-accelerated processing with {hardware_allocation['file_workers']} file workers...")
-    parallel_start_time = pd.Timestamp.now()
+    # Phase 1: Parallel file processing for data preparation
+    filtered_file_data = []
     
     with ProcessPoolExecutor(max_workers=hardware_allocation['file_workers']) as executor:
         future_to_file = {
-            executor.submit(process_single_file, args): args[0] 
-            for args in file_args
+            executor.submit(process_function, args): args[0] 
+            for args in phase1_args
         }
         
         completed_files = 0
@@ -267,20 +278,47 @@ def file_processor_accelerated(log_directory: str, metric_names: List[str], base
             completed_files += 1
             
             try:
-                file_statistics = future.result()
-                if file_statistics:
-                    all_statistics_list.extend(file_statistics)
-                print(f"Completed {completed_files}/{len(csv_file_paths)} files")
+                file_result = future.result()
+                if file_result is not None:
+                    filtered_file_data.append(file_result)
+                print(f"Phase 1: {completed_files}/{len(csv_file_paths)} files prepared")
                 
             except Exception as e:
-                print(f"Error processing file {file_path}: {e}")
+                print(f"Phase 1 error for file {file_path}: {e}")
     
-    parallel_end_time = pd.Timestamp.now()
-    parallel_duration = (parallel_end_time - parallel_start_time).total_seconds()
-    throughput = len(csv_file_paths) / parallel_duration if parallel_duration > 0 else 0
+    phase1_end_time = pd.Timestamp.now()
+    phase1_duration = (phase1_end_time - phase1_start_time).total_seconds()
+    print(f"Phase 1 completed: {len(filtered_file_data)} files prepared in {phase1_duration:.2f}s")
     
-    print(f"Hardware-accelerated processing completed in {parallel_duration:.2f} seconds")
+    # ==================== PHASE 2: GPU batch processing ====================
+    print(f"\n--- Phase 2: Optimized GPU Batch Processing ---")
+    phase2_start_time = pd.Timestamp.now()
+    
+    # Phase 2: Single GPU batch processing call (no per-file overhead)
+    from modules.enhanced_gpu_processor import process_file_metrics_with_parallel_gpu
+    all_statistics_list = process_file_metrics_with_parallel_gpu(filtered_file_data, metric_names)
+    
+    phase2_end_time = pd.Timestamp.now()
+    phase2_duration = (phase2_end_time - phase2_start_time).total_seconds()
+    
+    # Calculate total processing time
+    total_duration = phase1_duration + phase2_duration
+    throughput = len(csv_file_paths) / total_duration if total_duration > 0 else 0
+    
+    if gpu_phase1:
+        phase1_label = "GPU prep"
+    else:
+        phase1_label = "CPU prep"
+    
+    print(f"\nOptimized processing completed in {total_duration:.2f} seconds")
+    print(f"Phase 1 ({phase1_label}): {phase1_duration:.2f}s ({phase1_duration/total_duration*100:.1f}%)")
+    print(f"Phase 2 (GPU batch): {phase2_duration:.2f}s ({phase2_duration/total_duration*100:.1f}%)")
     print(f"Throughput: {throughput:.2f} files/second")
+    
+    if gpu_phase1:
+        print(f"GPU Phase 1 acceleration: Enabled")
+    else:
+        print(f"CPU Phase 1 processing: Standard")
     
     # Combine all results
     if all_statistics_list:
@@ -308,8 +346,8 @@ def file_processor_accelerated(log_directory: str, metric_names: List[str], base
 
 # Alias for backward compatibility
 def file_processor(log_directory: str, metric_names: List[str], baseline_metric_name: str) -> pd.DataFrame:
-    """Backward-compatible wrapper for the accelerated file processor"""
-    # Processing strategy: Hardware-accelerated (wrapper function)
-    print("Processing strategy: Hardware-accelerated file processor (backward-compatible wrapper)")
+    """Backward-compatible wrapper for the optimized two-phase processor"""
+    # Processing strategy: Optimized two-phase architecture (wrapper)
+    print("Processing strategy: Optimized two-phase architecture (backward-compatible wrapper)")
     
     return file_processor_accelerated(log_directory, metric_names, baseline_metric_name)

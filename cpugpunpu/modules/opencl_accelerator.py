@@ -9,6 +9,7 @@ import time
 
 class OpenCLAccelerator:
     """OpenCL GPU acceleration manager for Intel Arc Graphics"""
+    _initialization_logged = False  # Class variable to track if we've logged initialization
     
     def __init__(self):
         self.context = None
@@ -54,9 +55,12 @@ class OpenCLAccelerator:
             self.queue = cl.CommandQueue(self.context)
             self.available = True
             
-            print(f"OpenCL GPU initialized: {self.device.name}")
-            print(f"GPU Memory: {self.device.global_mem_size / (1024**3):.2f} GB")
-            print(f"Processing strategy: GPU-accelerated (OpenCL)")
+            # Only print initialization message once per session
+            if not OpenCLAccelerator._initialization_logged:
+                print(f"OpenCL GPU initialized: {self.device.name}")
+                print(f"GPU Memory: {self.device.global_mem_size / (1024**3):.2f} GB")
+                print(f"Processing strategy: GPU-accelerated (OpenCL)")
+                OpenCLAccelerator._initialization_logged = True
             
         except Exception as e:
             print(f"OpenCL initialization failed: {e}")

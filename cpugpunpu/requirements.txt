@@ -10,10 +10,6 @@ openpyxl>=3.0.0
 # pyopencl>=2022.1.0  # For OpenCL GPU computing
 # cupy>=10.0.0         # For NVIDIA CUDA (if available)
 
-# NPU acceleration (optional - install based on available hardware)
-# onnxruntime>=1.12.0  # For ONNX NPU inference
-# intel-extension-for-pytorch>=1.12.0  # For Intel NPU support
-
 # Hardware detection
 # wmi>=1.5.1          # For Windows hardware detection (Windows only)
 
