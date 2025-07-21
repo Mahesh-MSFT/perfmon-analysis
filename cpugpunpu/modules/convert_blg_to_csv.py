@@ -1,4 +1,5 @@
-# Hardware-accelerated BLG to CSV conversion for perfmon3.py
+# CPU-based BLG to CSV conversion for perfmon3.py
+# Uses relog.exe system utility with parallel processing
 import os
 import subprocess
 import time
@@ -11,8 +12,8 @@ def convert_single_blg_file(blg_file_path: str) -> Tuple[bool, str, str]:
     Convert a single .blg file to .csv using relog.exe.
     Returns a tuple: (success: bool, blg_file_path: str, message: str)
     """
-    # Processing strategy: CPU-based (using relog.exe system process)
-    print(f"Processing strategy: CPU-based conversion for {os.path.basename(blg_file_path)}")
+    # Uses CPU-based relog.exe system process
+    print(f"Converting: {os.path.basename(blg_file_path)}")
     
     csv_file_path = os.path.splitext(blg_file_path)[0] + '.csv'
     
@@ -30,9 +31,6 @@ def convert_single_blg_file(blg_file_path: str) -> Tuple[bool, str, str]:
 
 def estimate_workload_size(blg_files: List[str]) -> float:
     """Estimate total workload size in GB based on BLG files"""
-    # Processing strategy: CPU-based (file system operations)
-    print("Processing strategy: CPU-based workload estimation")
-    
     total_size = 0
     for file_path in blg_files[:3]:  # Sample first 3 files
         try:
@@ -49,7 +47,8 @@ def estimate_workload_size(blg_files: List[str]) -> float:
 
 def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
     """
-    Hardware-accelerated BLG to CSV conversion with intelligent worker allocation.
+    CPU-based BLG to CSV conversion using optimal CPU worker allocation.
+    Uses relog.exe system utility with parallel processing for I/O-bound tasks.
     
     Args:
         log_dir: Directory containing .blg files
@@ -57,8 +56,7 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
     Returns:
         Dictionary with conversion statistics
     """
-    # Processing strategy: Hardware-accelerated (CPU+GPU+NPU aware)
-    print("Processing strategy: Hardware-accelerated conversion with intelligent worker allocation")
+    print("BLG to CSV conversion: CPU-based parallel processing")
     
     # Find all BLG files
     blg_files = []
@@ -71,14 +69,14 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
     if total_files == 0:
         return {'total': 0, 'converted': 0, 'skipped': 0, 'failed': 0}
     
-    # Get optimal worker allocation for I/O bound tasks
+    # Get optimal CPU worker allocation for I/O bound tasks
     workload_size_gb = estimate_workload_size(blg_files)
     worker_allocation = get_optimal_workers('io_bound', workload_size_gb)
     max_workers = max(1, worker_allocation['cpu'])
     
-    # Display detailed processing strategy
-    print(f"Hardware allocation: CPU workers={max_workers}, GPU workers={worker_allocation.get('gpu', 0)}, NPU workers={worker_allocation.get('npu', 0)}")
-    print(f"Converting {total_files} BLG files using {max_workers} workers...")
+    # Display CPU processing strategy
+    print(f"CPU workers: {max_workers}")
+    print(f"Converting {total_files} BLG files using {max_workers} parallel processes...")
     
     # Initialize counters
     converted_files = 0
@@ -130,8 +128,5 @@ def convert_blg_to_csv_accelerated(log_dir: str) -> Dict[str, int]:
 
 # Alias for backward compatibility
 def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
-    """Backward-compatible wrapper for the accelerated conversion function"""
-    # Processing strategy: Hardware-accelerated (wrapper function)
-    print("Processing strategy: Hardware-accelerated (backward-compatible wrapper)")
-    
+    """Backward-compatible wrapper for the CPU-based conversion function"""
     return convert_blg_to_csv_accelerated(log_dir)

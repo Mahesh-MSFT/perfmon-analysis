@@ -57,10 +57,14 @@ class ParallelGPUProcessor:
             
             self.available = True
             
-            print(f"Parallel GPU initialized: {self.device.name}")
-            print(f"Compute Units: {compute_units}, Max Work Group Size: {max_work_group_size}")
-            print(f"Parallel GPU Queues: {len(self.queues)}")
-            print(f"Max Parallel Jobs: {self.max_parallel_jobs}")
+            # Only log initialization details once
+            global _initialization_logged
+            if not _initialization_logged:
+                print(f"Parallel GPU initialized: {self.device.name}")
+                print(f"Compute Units: {compute_units}, Max Work Group Size: {max_work_group_size}")
+                print(f"Parallel GPU Queues: {len(self.queues)}")
+                print(f"Max Parallel Jobs: {self.max_parallel_jobs}")
+                _initialization_logged = True
             
         except Exception as e:
             print(f"Parallel GPU initialization failed: {e}")
@@ -190,6 +194,7 @@ class ParallelGPUProcessor:
 
 # Global instance for reuse
 _parallel_gpu_processor = None
+_initialization_logged = False
 
 def get_parallel_gpu_processor() -> ParallelGPUProcessor:
     """Get the singleton parallel GPU processor"""

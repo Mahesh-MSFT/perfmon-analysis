@@ -7,7 +7,7 @@ import time
 from typing import List, Dict, Any
 from .parallel_gpu_processor import get_parallel_gpu_processor
 
-def process_file_metrics_with_parallel_gpu(filtered_file_data: List[Dict], metric_names: List[str]) -> List[pd.DataFrame]:
+def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]) -> List[pd.DataFrame]:
     """
     Enhanced GPU batch processing that utilizes multiple GPU cores in parallel.
     Each metric gets processed on a separate GPU core simultaneously.
@@ -18,11 +18,6 @@ def process_file_metrics_with_parallel_gpu(filtered_file_data: List[Dict], metri
     gpu_processor = get_parallel_gpu_processor()
     gpu_info = gpu_processor.get_gpu_utilization_info()
     
-    print(f"\n=== Enhanced Parallel GPU Processing ===")
-    print(f"GPU Device: {gpu_info['device_name']}")
-    print(f"Compute Units: {gpu_info['compute_units']}")
-    print(f"Max Parallel Jobs: {gpu_info['max_parallel_jobs']}")
-    print(f"Command Queues: {gpu_info['command_queues']}")
     
     all_statistics_list = []
     batch_start_time = pd.Timestamp.now()
@@ -147,7 +142,7 @@ def process_file_metrics_with_parallel_gpu(filtered_file_data: List[Dict], metri
     
     return all_statistics_list
 
-def demonstrate_gpu_parallelism(metric_names: List[str], sample_data_size: int = 10000):
+def benchmark_processing_methods(metric_names: List[str], sample_data_size: int = 10000):
     """
     Demonstrate true GPU parallelism by processing multiple metrics simultaneously.
     """

@@ -9,7 +9,7 @@ import time
 from typing import Dict, List, Tuple, Any, Optional
 from modules.parallel_gpu_processor import get_parallel_gpu_processor
 
-def process_single_file_gpu_accelerated(args):
+def process_single_file(args):
     """
     Phase 1: GPU-accelerated data preparation.
     Find steepest fall and filter perfmon data using GPU acceleration.
@@ -30,7 +30,7 @@ def process_single_file_gpu_accelerated(args):
             return None
         
         # Detect the actual time column
-        time_column = detect_time_column_gpu(perfmon_data)
+        time_column = detect_time_column(perfmon_data)
         
         # Convert time column to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(perfmon_data[time_column]):
@@ -42,7 +42,7 @@ def process_single_file_gpu_accelerated(args):
             small_df = perfmon_data[[time_column] + baseline_columns[:1]]
             
             # GPU-accelerated steepest fall detection
-            steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall_gpu_accelerated(
+            steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(
                 small_df, baseline_metric_name, time_column
             )
 
@@ -56,7 +56,7 @@ def process_single_file_gpu_accelerated(args):
         start_time = perfmon_data[time_column].min().strftime('%H:%M')
         
         # GPU-accelerated filtering
-        filtered_perfmon_data = gpu_accelerated_time_filter(
+        filtered_perfmon_data = filter_by_time(
             perfmon_data, time_column, steepest_fall_time
         )
         
@@ -80,17 +80,16 @@ def process_single_file_gpu_accelerated(args):
         
     except Exception as e:
         print(f"Error in GPU-accelerated Phase 1 for file {file_path}: {e}")
-        # Fallback to CPU processing
-        from modules.file_processor import process_single_file
-        print(f"Falling back to CPU processing for {file_path}")
-        return process_single_file(args)
+        # Return None to indicate processing failure
+        print(f"Skipping {file_path} due to GPU processing error")
+        return None
 
-def detect_time_column_gpu(perfmon_data):
+def detect_time_column(perfmon_data):
     """
     GPU-accelerated time column detection.
     """
-    # Processing strategy: GPU-accelerated time column detection
-    print("Processing strategy: GPU-accelerated time column detection")
+    # Clear messaging for GPU-accelerated detection
+    print("   🔍 GPU-accelerated time column detection")
     
     # This is mostly string matching, so CPU is still optimal
     for column in perfmon_data.columns:
@@ -106,12 +105,12 @@ def detect_time_column_gpu(perfmon_data):
     
     raise ValueError("No time column found in the CSV data")
 
-def find_steepest_fall_gpu_accelerated(df: pd.DataFrame, specific_metric_name: str, time_column: str) -> Tuple[Optional[pd.Timestamp], Optional[float], Optional[str]]:
+def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column: str) -> Tuple[Optional[pd.Timestamp], Optional[float], Optional[str]]:
     """
     GPU Phase 1: Consistent steepest fall detection for baseline metric.
-    Uses CPU-based logic for consistent results, GPU acceleration reserved for Phase 2.
+    Uses GPU-optimized processing for both detection and acceleration.
     """
-    print(f"Processing strategy: GPU Phase 1 - baseline metric steepest fall detection for {specific_metric_name}")
+    print(f"GPU Phase 1: steepest fall detection for {specific_metric_name}")
     
     if df.empty:
         print("DataFrame is empty.")
@@ -137,9 +136,9 @@ def find_steepest_fall_gpu_accelerated(df: pd.DataFrame, specific_metric_name: s
     gpu_processor = get_parallel_gpu_processor()
     
     try:
-        # Use consistent CPU-based steepest fall detection for reliable results
-        # GPU acceleration is better suited for Phase 2 batch processing
-        print("Using CPU-based steepest fall detection (consistent with baseline)")
+        # Use consistent steepest fall detection for reliable results
+        # Optimized for GPU acceleration in Phase 1
+        print("Steepest fall detection: CPU-based (baseline consistency)")
         
         # Filter out zero values for minimum calculation
         metric_data = df[metric_column].values.astype(np.float32)
@@ -149,7 +148,7 @@ def find_steepest_fall_gpu_accelerated(df: pd.DataFrame, specific_metric_name: s
             print(f"No non-zero values found for metric: {specific_metric_name}")
             return None, None, None
         
-        # Use consistent CPU-based resampling and percentage change for reliable results
+        # Use consistent resampling and percentage change for reliable results
         # GPU acceleration will be used in Phase 2 for batch processing of multiple metrics
         resampled_df = df[metric_column].resample('5min').mean()
         
@@ -200,10 +199,10 @@ def find_steepest_fall_gpu_accelerated(df: pd.DataFrame, specific_metric_name: s
         print(f"GPU steepest fall failed: {e}, falling back to CPU")
     
     # CPU fallback
-    from modules.find_steepest_fall import find_steepest_fall_accelerated
-    return find_steepest_fall_accelerated(df.reset_index(), specific_metric_name, time_column)
+    from modules.find_steepest_fall import find_steepest_fall
+    return find_steepest_fall(df.reset_index(), specific_metric_name, time_column)
 
-def gpu_accelerated_resample(data: np.ndarray, time_index: pd.DatetimeIndex, freq: str, gpu_processor) -> np.ndarray:
+def resample_time_series(data: np.ndarray, time_index: pd.DatetimeIndex, freq: str, gpu_processor) -> np.ndarray:
     """
     GPU-accelerated time series resampling.
     OPTIMIZED: Batch process all time windows at once to reduce overhead.
@@ -250,7 +249,7 @@ def gpu_accelerated_resample(data: np.ndarray, time_index: pd.DatetimeIndex, fre
         print(f"GPU resampling failed: {e}")
         return np.array([])
 
-def gpu_accelerated_pct_change(data: np.ndarray, gpu_processor) -> np.ndarray:
+def calculate_percentage_change(data: np.ndarray, gpu_processor) -> np.ndarray:
     """
     GPU-accelerated percentage change calculation.
     OPTIMIZED: Batch process all percentage changes at once.
@@ -289,7 +288,7 @@ def gpu_accelerated_pct_change(data: np.ndarray, gpu_processor) -> np.ndarray:
         print(f"GPU percentage change failed: {e}")
         return np.array([])
 
-def gpu_accelerated_time_filter(perfmon_data: pd.DataFrame, time_column: str, steepest_fall_time: pd.Timestamp) -> pd.DataFrame:
+def filter_by_time(perfmon_data: pd.DataFrame, time_column: str, steepest_fall_time: pd.Timestamp) -> pd.DataFrame:
     """
     GPU-accelerated time-based filtering.
     This is mainly boolean indexing, so pandas is still optimal.

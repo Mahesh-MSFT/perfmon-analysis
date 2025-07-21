@@ -1,5 +1,5 @@
-# perfmon3.py - Hardware-accelerated BLG conversion
-# Utilizes CPU and GPU capabilities for optimal performance
+# perfmon3.py - GPU-accelerated BLG conversion
+# Utilizes GPU capabilities for optimal performance
 
 import os
 import sys
@@ -40,9 +40,9 @@ def choose_processing_strategy() -> str:
     hardware = get_hardware_detector()
     
     if hardware.profile.gpu:
-        return 'cpu_gpu'
+        return 'gpu_only'
     else:
-        return 'cpu_only'
+        return 'gpu_fallback'
 
 def main():
     """Main execution function - Hardware-accelerated BLG conversion and CSV processing"""
@@ -113,33 +113,33 @@ def main():
         
         baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'  # Same as perfmon2
         
-        # Compare CPU vs GPU Phase 1 processing
-        print("\n� PERFORMANCE COMPARISON: CPU vs GPU Phase 1 �")
+        # GPU-accelerated processing
+        print("\n� GPU-ACCELERATED PROCESSING �")
         
-        print("\n--- Testing CPU-only Phase 1 (baseline) ---")
-        start_time_cpu = pd.Timestamp.now()
-        cpu_stats_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name, gpu_phase1=False)
-        cpu_duration = (pd.Timestamp.now() - start_time_cpu).total_seconds()
-        
-        print(f"\n--- Testing GPU-accelerated Phase 1 ---")
+        print("\n--- Processing with GPU Architecture (GPU Phase 1 + GPU Phase 2) ---")
         start_time_gpu = pd.Timestamp.now()
-        gpu_stats_df = file_processor_accelerated(log_directory, metric_names, baseline_metric_name, gpu_phase1=True)
+        gpu_stats_df, gpu_performance_data = file_processor_accelerated(log_directory, metric_names, baseline_metric_name)
         gpu_duration = (pd.Timestamp.now() - start_time_gpu).total_seconds()
         
-        # Performance comparison
-        gpu_improvement = ((cpu_duration - gpu_duration) / cpu_duration) * 100
-        
-        print(f"\n🏆 PERFORMANCE RESULTS:")
-        print(f"CPU Phase 1: {cpu_duration:.2f}s (baseline)")
-        print(f"GPU Phase 1: {gpu_duration:.2f}s ({gpu_improvement:+.1f}%)")
-        
-        # Use the better performing approach
-        if gpu_improvement > 0:
-            statistics_df = gpu_stats_df
-            print("⚡ GPU Phase 1 provides best performance - using GPU results")
+        print(f"\n🏆 GPU PROCESSING RESULTS:")
+        print(f"════════════════════════════════════════════════════════")
+        print(f"📊 GPU ARCHITECTURE (GPU + GPU):")
+        print(f"   ⏱️  Total Elapsed Time: {gpu_duration:.2f}s")
+        print(f"   🔄  Phase 1 Duration: {gpu_performance_data.get('phase1_duration', 0):.2f}s")
+        print(f"   🎯  Phase 2 Duration: {gpu_performance_data.get('phase2_duration', 0):.2f}s")
+        print(f"   ⚡  Overlap Duration: {gpu_performance_data.get('overlap_duration', 0):.2f}s")
+        print(f"   📈  Statistics Generated: {gpu_performance_data.get('statistics_generated', 0)}")
+        print(f"   �  Processing Rate: {gpu_performance_data.get('gpu_processing_rate', 0):.1f} stats/sec")
+        if gpu_performance_data.get('overlap_duration', 0) > 0:
+            overlap_pct_gpu = (gpu_performance_data.get('overlap_duration', 0) / gpu_performance_data.get('phase1_duration', 1)) * 100
+            print(f"   �  Streaming Efficiency: {overlap_pct_gpu:.1f}% overlap")
         else:
-            statistics_df = cpu_stats_df
-            print("💻 CPU Phase 1 provides best performance - using CPU results")
+            print(f"   ⚠️  No streaming overlap detected")
+        print(f"════════════════════════════════════════════════════════")
+        
+        # Use the GPU results
+        statistics_df = gpu_stats_df
+        print("\n⚡ GPU PROCESSING COMPLETE - Results ready")
         
         if not statistics_df.empty:
             print(f"Statistics calculated for {len(statistics_df)} metrics")

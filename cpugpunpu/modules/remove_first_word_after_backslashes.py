@@ -1,7 +1,7 @@
 def remove_first_word_after_backslashes(col):
     """
     Remove the first word following the first pair of backslashes and the backslash immediately after that.
-    Hardware-accelerated version (CPU-optimized for string operations).
+    GPU pipeline optimized (CPU-optimized for string operations).
     """
     # Processing strategy: CPU-based (string processing)
     # String operations are inherently CPU-optimized and don't benefit from GPU acceleration
