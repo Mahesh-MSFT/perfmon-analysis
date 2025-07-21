@@ -41,7 +41,7 @@ def calculate_statistics_accelerated(df: pd.DataFrame, metric_name: str, file_da
     #print(f"Processing strategy: Hardware-accelerated statistics calculation for {metric_name}")
     
     # Import parallel GPU processor for true multi-core utilization
-    from modules.parallel_gpu_processor import get_parallel_gpu_processor
+    from modules.batch_processor import get_parallel_gpu_processor
     gpu_processor = get_parallel_gpu_processor()
     
     # Filter columns based on the metric name

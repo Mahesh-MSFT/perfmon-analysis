@@ -159,7 +159,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     hardware_allocation = calculate_hardware_aware_workers(csv_file_paths)
     
     # Use GPU processing function
-    from modules.gpu_phase1_processor import process_single_file
+    from modules.data_preprocessor import process_single_file
     process_function = process_single_file
     print("Using GPU acceleration for Phase 1 data preparation")
     
@@ -192,7 +192,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
             print(f"🚀 GPU Phase 2 starting immediately for {os.path.basename(file_path)}")
             
             # Process this single file through GPU Phase 2 immediately
-            from modules.enhanced_gpu_processor import process_file_metrics
+            from modules.metrics_processor import process_file_metrics
             single_file_stats = process_file_metrics([file_result], metric_names)
             
             if single_file_stats:
