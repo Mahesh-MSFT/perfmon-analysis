@@ -108,13 +108,37 @@ def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int
     
     return allocation
 
-def process_single_file_phase2(file_result, file_path, metric_names):
+def process_single_file_phase2(file_result, file_path, metric_names, baseline_metric_name):
     """Process GPU Phase 2 for a single file."""
     try:
         print(f"🚀 GPU Phase 2 starting immediately for {os.path.basename(file_path)}")
         
+        # Pre-filter file data to include only relevant metric columns + time column
+        filtered_perfmon_data = file_result['filtered_data']
+        time_column = file_result['time_column']
+        
+        # Find columns that match any of the requested metrics
+        relevant_columns = [time_column]  # Always include time column
+        for metric_name in metric_names:
+            metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
+            relevant_columns.extend(metric_columns)
+        
+        # Remove duplicates while preserving order
+        relevant_columns = list(dict.fromkeys(relevant_columns))
+        
+        # Create filtered dataset with only relevant columns
+        filtered_data_subset = filtered_perfmon_data[relevant_columns]
+        
+        # Create a new file_result with only the relevant data
+        filtered_file_result = {
+            **file_result,  # Copy all metadata
+            'filtered_data': filtered_data_subset
+        }
+        
+        print(f"  📊 Pre-filtered: {len(filtered_perfmon_data.columns)} → {len(relevant_columns)} columns ({len(metric_names)} metrics requested)")
+        
         from modules.metrics_processor import process_file_metrics
-        single_file_stats = process_file_metrics([file_result], metric_names)
+        single_file_stats = process_file_metrics([filtered_file_result], metric_names, baseline_metric_name)
         
         if single_file_stats:
             print(f"✅ GPU Phase 2 complete for {os.path.basename(file_path)} - {len(single_file_stats)} statistics")
@@ -142,7 +166,7 @@ def execute_phase1(csv_file_paths: List[str], baseline_metric_name: str):
     return phase1_args, hardware_allocation
 
 def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Dict[str, int], 
-                               optimal_gpu_workers: int, metric_names: List[str]):
+                               optimal_gpu_workers: int, metric_names: List[str], baseline_metric_name: str):
     """Execute the streaming pipeline with Phase 1 and Phase 2 processing."""
     from modules.data_preprocessor import process_single_file
     
@@ -185,7 +209,7 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
                             first_phase2_start = pd.Timestamp.now()
                         
                         # Submit GPU Phase 2 task immediately
-                        gpu_future = gpu_executor.submit(process_single_file_phase2, file_result, file_path, metric_names)
+                        gpu_future = gpu_executor.submit(process_single_file_phase2, file_result, file_path, metric_names, baseline_metric_name)
                         gpu_phase2_futures.append(gpu_future)
                         
                         last_phase1_complete = pd.Timestamp.now()
@@ -322,7 +346,7 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     
     # Step 4: Execute streaming pipeline
     filtered_file_data, all_statistics_list, timing_data = execute_streaming_pipeline(
-        phase1_args, hardware_allocation, optimal_gpu_workers, metric_names
+        phase1_args, hardware_allocation, optimal_gpu_workers, metric_names, baseline_metric_name
     )
     
     # Step 5: Print analysis and performance summary

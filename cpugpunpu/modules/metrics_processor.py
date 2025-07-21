@@ -7,7 +7,7 @@ import time
 from typing import List, Dict, Any
 from .batch_processor import get_parallel_gpu_processor
 
-def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]) -> List[pd.DataFrame]:
+def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str], baseline_metric_name: str = None) -> List[pd.DataFrame]:
     """
     Enhanced GPU batch processing that utilizes multiple GPU cores in parallel.
     Each metric gets processed on a separate GPU core simultaneously.
@@ -37,23 +37,38 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
         file_name = file_path.split('\\')[-1]
         print(f"\nProcessing {len(metric_names)} metrics for {file_name} in parallel...")
         
-        # Prepare all metric data for parallel GPU processing
+        # Prepare metric data for parallel GPU processing
+        # Handle baseline metric (single column) and other metrics (multiple columns) differently
         file_metric_data = {}
         valid_metrics = []
         column_to_metric_map = {}  # Map full column names to base metric names
         
         for metric_name in metric_names:
+            # Find all columns that match this metric
             metric_columns = [col for col in filtered_perfmon_data.columns if metric_name in col]
+            
             if metric_columns:
-                # Process EACH matching column individually, not just the first one
-                for column_name in metric_columns:
+                if baseline_metric_name and metric_name == baseline_metric_name:
+                    # For baseline metric, process only the FIRST matching column
+                    column_name = metric_columns[0]
                     column_data = pd.to_numeric(filtered_perfmon_data[column_name], errors='coerce').dropna()
                     if len(column_data) > 0:
-                        # Use the full column name as the key to ensure uniqueness
                         file_metric_data[column_name] = column_data.values
                         valid_metrics.append(column_name)
-                        # Keep track of which base metric this column belongs to
                         column_to_metric_map[column_name] = metric_name
+                        print(f"  Baseline metric '{metric_name}': Using single column '{column_name}'")
+                else:
+                    # For other metrics, process ALL matching columns individually
+                    columns_added = 0
+                    for column_name in metric_columns:
+                        column_data = pd.to_numeric(filtered_perfmon_data[column_name], errors='coerce').dropna()
+                        if len(column_data) > 0:
+                            file_metric_data[column_name] = column_data.values
+                            valid_metrics.append(column_name)
+                            column_to_metric_map[column_name] = metric_name
+                            columns_added += 1
+                    if columns_added > 0:
+                        print(f"  Metric '{metric_name}': Using {columns_added} columns")
         
         if not file_metric_data:
             print(f"No valid metric data found for {file_path}")
@@ -84,7 +99,6 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
                 # Extract header information directly from the column name
                 column_header = extract_header_from_column_name(column_name)
                 modified_metric_name = remove_first_word_after_backslashes(column_name)
-                modified_metric_names = [remove_first_word_after_backslashes(col) for col in metric_columns]
                 
                 # Create duration string
                 duration = f"({start_time} - {steepest_fall_time.strftime('%H:%M')})"

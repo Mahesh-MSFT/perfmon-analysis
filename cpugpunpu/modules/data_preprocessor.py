@@ -89,7 +89,7 @@ def detect_time_column(perfmon_data):
     GPU-accelerated time column detection.
     """
     # Clear messaging for GPU-accelerated detection
-    print("   🔍 GPU-accelerated time column detection")
+    #print("   🔍 GPU-accelerated time column detection")
     
     # This is mostly string matching, so CPU is still optimal
     for column in perfmon_data.columns:
@@ -110,7 +110,7 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
     GPU Phase 1: Consistent steepest fall detection for baseline metric.
     Uses GPU-optimized processing for both detection and acceleration.
     """
-    print(f"GPU Phase 1: steepest fall detection for {specific_metric_name}")
+    #print(f"GPU Phase 1: steepest fall detection for {specific_metric_name}")
     
     if df.empty:
         print("DataFrame is empty.")
