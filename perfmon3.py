@@ -7,9 +7,9 @@ import pandas as pd
 import gc
 
 # Import hardware detection and processing modules
-from cpugpunpu.modules.hardware_detector import get_hardware_detector, print_hardware_info
-from cpugpunpu.modules.convert_blg_to_csv import convert_blg_to_csv
-from cpugpunpu.modules.file_processor import file_processor
+from cpugpu.modules.hardware_detector import get_hardware_detector, print_hardware_info
+from cpugpu.modules.convert_blg_to_csv import convert_blg_to_csv
+from cpugpu.modules.file_processor import file_processor
 
 # Configuration
 log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
