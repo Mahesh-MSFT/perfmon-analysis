@@ -3,11 +3,8 @@ import sys
 import pandas as pd
 import gc
 
-# Add parent directory to Python path to access shared modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from modules.file_processor import file_processor
-from modules.convert_blg_to_csv import convert_blg_to_csv
+from cpuonly.modules.file_processor import file_processor
+from cpuonly.modules.convert_blg_to_csv import convert_blg_to_csv
 from shared.modules.excel_creator import excel_creator
 
 log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
