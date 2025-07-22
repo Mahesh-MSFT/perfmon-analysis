@@ -33,7 +33,7 @@ class GPUProcessor:
     def _calculate_optimal_queues(self) -> int:
         """Calculate optimal queue count based on GPU hardware specifications"""
         try:
-            from modules.hardware_detector import get_hardware_detector
+            from .hardware_detector import get_hardware_detector
             hardware = get_hardware_detector()
             
             if hardware.profile.gpu:
@@ -110,7 +110,7 @@ class GPUProcessor:
     def get_utilization_info(self) -> Dict[str, Any]:
         """Get GPU utilization information"""
         try:
-            from modules.hardware_detector import get_hardware_detector
+            from .hardware_detector import get_hardware_detector
             hardware = get_hardware_detector()
             actual_compute_units = hardware.profile.gpu.compute_units if hardware.profile.gpu else 0
         except:

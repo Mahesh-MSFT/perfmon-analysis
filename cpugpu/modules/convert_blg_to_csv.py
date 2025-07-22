@@ -5,7 +5,7 @@ import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Tuple, List, Dict
-from modules.hardware_detector import get_optimal_workers
+from .hardware_detector import get_optimal_workers
 
 def convert_single_blg_file(blg_file_path: str) -> Tuple[bool, str, str]:
     """

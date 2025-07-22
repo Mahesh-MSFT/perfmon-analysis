@@ -8,7 +8,7 @@ import pandas as pd
 import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from typing import List, Dict, Tuple, Any
-from modules.hardware_detector import get_hardware_detector
+from .hardware_detector import get_hardware_detector
 
 def detect_time_column(perfmon_data):
     """Detect the time column in the CSV data."""
@@ -59,7 +59,7 @@ def process_single_file(args):
             small_df = perfmon_data[[time_column] + baseline_columns[:1]]
             
             # CPU-optimized steepest fall detection (avoid GPU context switch for small operations)
-            from modules.find_steepest_fall import find_steepest_fall
+            from .find_steepest_fall import find_steepest_fall
             steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(
                 small_df, baseline_metric_name, time_column
             )
@@ -186,7 +186,7 @@ def process_single_file_phase2(file_result, file_path, metric_names, baseline_me
             'filtered_data': filtered_data_subset
         }
         
-        from modules.gpu_processor import process_file_metrics
+        from .gpu_processor import process_file_metrics
         single_file_stats = process_file_metrics([filtered_file_result], metric_names, baseline_metric_name)
         
         if single_file_stats:

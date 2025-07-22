@@ -171,7 +171,7 @@ class HardwareDetector:
                 print(f"GPU Libraries: opencl")
                 print()
                 try:
-                    from modules.gpu_processor import initialize_gpu_once
+                    from .gpu_processor import initialize_gpu_once
                     initialize_gpu_once()
                 except Exception as e:
                     print(f"GPU initialization failed: {e}")

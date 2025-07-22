@@ -4,9 +4,9 @@ import pandas as pd
 import psutil
 import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-from modules.calculate_statistics import calculate_statistics
+from .calculate_statistics import calculate_statistics
 from shared.modules.ensure_consistent_structure import ensure_consistent_structure
-from modules.find_steepest_fall import find_steepest_fall
+from .find_steepest_fall import find_steepest_fall
 
 def detect_time_column(perfmon_data):
     """

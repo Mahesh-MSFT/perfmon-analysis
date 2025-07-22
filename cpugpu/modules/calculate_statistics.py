@@ -11,7 +11,7 @@ def extract_header_from_column_name(column_name: str) -> str:
     # This is a lightweight string operation that doesn't benefit from GPU acceleration
     
     # Import the existing function
-    from modules.extract_header_from_column_name import extract_header_from_column_name as cpu_extract_header
+    from .extract_header_from_column_name import extract_header_from_column_name as cpu_extract_header
     return cpu_extract_header(column_name)
 
 def remove_first_word_after_backslashes(column_name: str) -> str:
@@ -20,7 +20,7 @@ def remove_first_word_after_backslashes(column_name: str) -> str:
     # This is a lightweight string operation that doesn't benefit from GPU acceleration
     
     # Import the existing function
-    from modules.remove_first_word_after_backslashes import remove_first_word_after_backslashes as cpu_remove_first_word
+    from .remove_first_word_after_backslashes import remove_first_word_after_backslashes as cpu_remove_first_word
     return cpu_remove_first_word(column_name)
 
 def calculate_statistics(df: pd.DataFrame, metric_name: str, file_date_time: str, start_time: str, end_time: str) -> pd.DataFrame:
@@ -41,7 +41,7 @@ def calculate_statistics(df: pd.DataFrame, metric_name: str, file_date_time: str
     #print(f"Processing strategy: Hardware-accelerated statistics calculation for {metric_name}")
     
     # Import parallel GPU processor for true multi-core utilization
-    from modules.batch_processor import get_parallel_gpu_processor
+    from .batch_processor import get_parallel_gpu_processor
     gpu_processor = get_parallel_gpu_processor()
     
     # Filter columns based on the metric name

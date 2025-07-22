@@ -1,6 +1,6 @@
 import pandas as pd
-from modules.extract_header_from_column_name import extract_header_from_column_name
-from modules.remove_first_word_after_backslashes import remove_first_word_after_backslashes
+from .extract_header_from_column_name import extract_header_from_column_name
+from .remove_first_word_after_backslashes import remove_first_word_after_backslashes
 
 
 def calculate_statistics(df, metric_name, file_date_time, start_time, end_time):
