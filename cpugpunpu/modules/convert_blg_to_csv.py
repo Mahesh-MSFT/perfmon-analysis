@@ -72,7 +72,10 @@ def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
     # Get optimal CPU worker allocation for I/O bound tasks
     workload_size_gb = estimate_workload_size(blg_files)
     worker_allocation = get_optimal_workers('io_bound', workload_size_gb)
-    max_workers = max(1, worker_allocation['cpu'])
+    
+    # Limit workers to the number of files - no point having more workers than files
+    optimal_workers = max(1, worker_allocation['cpu'])
+    max_workers = min(optimal_workers, total_files)
     
     # Display CPU processing strategy
     print(f"CPU workers: {max_workers}")

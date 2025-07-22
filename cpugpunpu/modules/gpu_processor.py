@@ -355,8 +355,8 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
         file_end_time = time.time()
         file_duration = file_end_time - file_start_time
         
-        print(f"  ✓ GPU Phase 2 completed in {file_duration:.3f}s for {len(valid_metrics)} individual columns")
-        print(f"=== GPU Phase 2 Complete for {file_name} ===\n")
+        #print(f"  ✓ GPU Phase 2 completed in {file_duration:.3f}s for {len(valid_metrics)} individual columns")
+        print(f"=== GPU Phase 2 Complete for {file_name} in {file_duration:.3f}s for {len(valid_metrics)} metrics ===\n")
         
         # Convert results to DataFrame format
         processed_count = 0
