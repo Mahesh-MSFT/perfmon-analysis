@@ -437,6 +437,15 @@ class HardwareDetector:
                     print(f"GPU Libraries: {', '.join(available_libs)}")
                 else:
                     print("GPU Libraries: None installed")
+                    
+            # Initialize GPU processor if OpenCL is available
+            if self.profile.gpu.opencl_available:
+                print()
+                try:
+                    from modules.gpu_processor import initialize_gpu_once
+                    initialize_gpu_once()
+                except Exception as e:
+                    print(f"GPU initialization failed: {e}")
         else:
             print("\nGPU: Not detected or not supported")
         

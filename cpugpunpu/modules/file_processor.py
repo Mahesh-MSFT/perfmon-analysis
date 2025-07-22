@@ -81,10 +81,6 @@ def process_single_file(args):
         del perfmon_data
         gc.collect()
         
-        file_end_time = pd.Timestamp.now()
-        file_duration = (file_end_time - file_start_time).total_seconds()
-        print(f"File {os.path.basename(file_path)} completed in {file_duration:.2f} seconds")
-        
         # Return structured data for Phase 2
         return {
             'file_path': file_path,
@@ -250,7 +246,7 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
                     if file_result is not None:
                         filtered_file_data.append(file_result)
                         
-                        print(f"Completed {completed_files}/{len(phase1_args)} files")
+                        print(f"Filtered {completed_files}/{len(phase1_args)} files")
                         
                         # Track first Phase 2 start
                         if first_phase2_start is None:
@@ -262,7 +258,7 @@ def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Di
                         
                         last_phase1_complete = pd.Timestamp.now()
                     else:
-                        print(f"Completed {completed_files}/{len(phase1_args)} files")
+                        print(f"Filtered {completed_files}/{len(phase1_args)} files")
                         last_phase1_complete = pd.Timestamp.now()
                 
                 except Exception as e:
