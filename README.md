@@ -165,9 +165,9 @@ flowchart TD
     E2 --> F2[GPU-Accelerated Metric Processing]
     E3 --> F3[GPU-Accelerated Metric Processing]
     
-    F1 --> G1[OpenCL GPU Kernels: Calculate Statistics]
-    F2 --> G2[OpenCL GPU Kernels: Calculate Statistics]
-    F3 --> G3[OpenCL GPU Kernels: Calculate Statistics]
+    F1 --> G1[GPU Compute: Statistical Analysis via OpenCL]
+    F2 --> G2[GPU Compute: Statistical Analysis via OpenCL]
+    F3 --> G3[GPU Compute: Statistical Analysis via OpenCL]
     
     G1 --> H[Consolidate Results]
     G2 --> H
