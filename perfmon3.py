@@ -12,7 +12,7 @@ from cpugpu.modules.convert_blg_to_csv import convert_blg_to_csv
 from cpugpu.modules.file_processor import file_processor
 
 # Configuration
-log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
+log_directory = r'C:\PATH\TO\BLGs'
 
 def validate_hardware_requirements() -> bool:
     """Validate that the system has the required hardware capabilities"""

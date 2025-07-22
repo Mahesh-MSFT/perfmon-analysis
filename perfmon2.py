@@ -7,7 +7,7 @@ from cpuonly.modules.file_processor import file_processor
 from cpuonly.modules.convert_blg_to_csv import convert_blg_to_csv
 from shared.modules.excel_creator import excel_creator
 
-log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
+log_directory = r'C:\PATH\TO\BLGs'
 metric_names = ['Request Execution Time',
          '# of Exceps Thrown', 
          '# of current logical Threads',

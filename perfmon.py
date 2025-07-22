@@ -206,7 +206,7 @@ def ensure_consistent_structure(df):
     return df
 
 # usage
-log_directory = r'C:\Users\maksh\OneDrive - Microsoft\Documents\AVS\PerfTest\ParallelTesting'
+log_directory = r'C:\PATH\TO\BLGs'
 metric_names = ['Request Execution Time',
          '# of Exceps Thrown', 
          '# of current logical Threads',
