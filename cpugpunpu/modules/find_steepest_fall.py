@@ -1,5 +1,5 @@
-# GPU-accelerated steepest fall detection for perfmon3.py
-# Phase 1: GPU-optimized processing for two-phase architecture
+# CPU-optimized steepest fall detection for perfmon3.py
+# Phase 1: CPU processing for two-phase architecture
 
 import pandas as pd
 import numpy as np
@@ -7,7 +7,7 @@ from typing import Tuple, Optional, Union
 
 def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column: Optional[str] = None) -> Tuple[Optional[pd.Timestamp], Optional[float], Optional[str]]:
     """
-    Phase 1: GPU-optimized steepest fall detection for two-phase architecture.
+    Phase 1: CPU-optimized steepest fall detection for two-phase architecture.
     
     Args:
         df: Performance monitor DataFrame
@@ -17,8 +17,8 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
     Returns:
         Tuple of (steepest_fall_time, steepest_fall_value, column_name)
     """
-    # Processing strategy: Phase 1 GPU-optimized processing
-    #print(f"Processing strategy: GPU-accelerated steepest fall detection for {specific_metric_name}")
+    # Processing strategy: Phase 1 CPU processing (pandas operations)
+    #print(f"Processing strategy: CPU-based steepest fall detection for {specific_metric_name}")
     
     if df.empty:
         print("DataFrame is empty.")
@@ -69,8 +69,8 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
     # Calculate the minimum value of the original DataFrame, considering only non-zero values
     min_value_df = non_zero_values.min()
     
-    # Phase 1: GPU-optimized time series resampling 
-    # Use pandas for consistent processing in Phase 1
+    # Phase 1: CPU-optimized time series resampling 
+    # Use pandas for efficient CPU processing in Phase 1
     resampled_df = df[metric_column].resample('5min').mean()
     
     # Filter the resampled DataFrame to include only non-zero mean values
@@ -86,8 +86,8 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
     # Convert resampled_df to a DataFrame
     resampled_df = resampled_df.to_frame(name=metric_column)
     
-    # Phase 1: GPU-optimized percentage change calculation (consistent with two-phase architecture)
-    # Use pandas for consistent processing in Phase 1
+    # Phase 1: CPU-optimized percentage change calculation (pandas operations)
+    # Use pandas for efficient CPU processing in Phase 1
     resampled_df['diff'] = resampled_df[metric_column].pct_change().abs() * 100
     
     # Remove NaN values from diff column
@@ -114,7 +114,7 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
         # Get the last time in the time column
         last_time_in_data = df.index.max()
         
-        print(f"GPU Phase 1 - Steepest fall time detected: {steepest_fall_time}")
+        print(f"CPU Phase 1 - Steepest fall time detected: {steepest_fall_time}")
         return steepest_fall_time, value_before_increase, metric_column
         
     except KeyError as e:
@@ -124,7 +124,7 @@ def find_steepest_fall(df: pd.DataFrame, specific_metric_name: str, time_column:
 # Alias for backward compatibility
 def find_steepest_fall_accelerated(df: pd.DataFrame, specific_metric_name: str, time_column: Optional[str] = None) -> Tuple[Optional[pd.Timestamp], Optional[float], Optional[str]]:
     """Backward-compatible wrapper for the main steepest fall detection"""
-    # Processing strategy: GPU-accelerated (wrapper function)
-    print("Processing strategy: GPU-accelerated steepest fall detection (backward-compatible wrapper)")
+    # Processing strategy: CPU-based (wrapper function)
+    print("Processing strategy: CPU-based steepest fall detection (backward-compatible wrapper)")
     
     return find_steepest_fall(df, specific_metric_name, time_column)
