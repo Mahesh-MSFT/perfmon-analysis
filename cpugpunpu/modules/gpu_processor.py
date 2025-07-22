@@ -260,8 +260,8 @@ def process_file_metrics(filtered_file_data: List[Dict], metric_names: List[str]
                             valid_metrics.append(column_name)
                             column_to_metric_map[column_name] = metric_name
                             columns_added += 1
-                    if columns_added > 0:
-                        print(f"  Metric '{metric_name}': Using {columns_added} columns")
+                    #if columns_added > 0:
+                        #print(f"  Metric '{metric_name}': Using {columns_added} columns")
         
         if not file_metric_data:
             print(f"No valid metric data found for {file_path}")

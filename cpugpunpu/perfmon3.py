@@ -104,7 +104,10 @@ def main():
         else:
             print("No statistics data was generated.")
         
-        # Memory cleanup
+        # Explicitly clear large DataFrame from memory
+        del statistics_df
+        
+        # Force garbage collection to free up memory
         gc.collect()
         
     except Exception as e:
@@ -112,9 +115,10 @@ def main():
         import traceback
         traceback.print_exc()
     
-    # Calculate elapsed time
     end_time = pd.Timestamp.now()
     elapsed_time = end_time - start_time
+    
+    # Format elapsed time in minutes and seconds
     total_seconds = elapsed_time.total_seconds()
     minutes = int(total_seconds // 60)
     seconds = total_seconds % 60

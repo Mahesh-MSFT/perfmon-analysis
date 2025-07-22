@@ -1,6 +1,7 @@
-# Simplified GPU-accelerated two-phase file processor for perfmon3.py
-# Phase 1: GPU-accelerated data preparation (steepest fall detection + filtering)
-# Phase 2: GPU statistics processing (parallel metric calculation)
+# Optimized two-phase file processor for perfmon3.py
+# Phase 1: CPU-optimized data preparation (I/O, parsing, filtering)  
+# Phase 2: GPU-accelerated statistics processing (intensive computations)
+# Architecture minimizes CPU↔GPU context switching for optimal performance
 
 import os
 import pandas as pd
@@ -25,13 +26,15 @@ def detect_time_column(perfmon_data):
 
 def process_single_file(args):
     """
-    Phase 1: GPU-accelerated data preparation.
-    Find steepest fall and filter perfmon data using GPU acceleration.
+    Phase 1: CPU-optimized data preparation.
+    Find steepest fall and filter perfmon data using efficient CPU processing.
+    GPU acceleration reserved for Phase 2 statistical computations.
     """
     file_path, baseline_metric_name = args
     
     try:
-        # Processing strategy: GPU-accelerated data preparation
+        # Processing strategy: CPU-optimized data preparation (Phase 1)
+        # Reserve GPU acceleration for computationally intensive Phase 2 operations
         print(f"Processing file: {os.path.basename(file_path)}")
         
         file_start_time = pd.Timestamp.now()
@@ -55,7 +58,7 @@ def process_single_file(args):
         if baseline_columns:
             small_df = perfmon_data[[time_column] + baseline_columns[:1]]
             
-            # GPU-accelerated steepest fall detection
+            # CPU-optimized steepest fall detection (avoid GPU context switch for small operations)
             from modules.find_steepest_fall import find_steepest_fall
             steepest_fall_time, steepest_fall_value, column_name = find_steepest_fall(
                 small_df, baseline_metric_name, time_column
@@ -70,7 +73,8 @@ def process_single_file(args):
         file_date_time = steepest_fall_time.strftime('%d-%b')
         start_time = perfmon_data[time_column].min().strftime('%H:%M')
         
-        # GPU-accelerated filtering - keep data from steepest fall time onwards
+        # CPU-optimized filtering - keep data from steepest fall time onwards  
+        # (GPU transfer overhead not justified for simple DataFrame filtering)
         filtered_perfmon_data = perfmon_data[perfmon_data[time_column] >= steepest_fall_time].copy()
         
         # Clear original data to free memory
