@@ -81,17 +81,16 @@ class GPUProcessor:
         """Process a single metric on GPU or CPU fallback"""
         queue_id, data, metric_name = args
         
-        # CPU fallback result
-        cpu_result = {
-            'metric_name': metric_name,
-            'mean': float(np.mean(data)),
-            'max': float(np.max(data)),
-            'queue_id': queue_id,
-            'processed_on': 'CPU'
-        }
-        
+        # Check GPU availability first - no computation yet
         if not self.available or queue_id >= len(self.queues):
-            return cpu_result
+            # Only calculate CPU fallback when GPU unavailable
+            return {
+                'metric_name': metric_name,
+                'mean': float(np.mean(data)),
+                'max': float(np.max(data)),
+                'queue_id': queue_id,
+                'processed_on': 'CPU'
+            }
         
         try:
             # Get dedicated queue for this metric
@@ -117,7 +116,14 @@ class GPUProcessor:
             
         except Exception as e:
             print(f"GPU processing failed for {metric_name}: {e}")
-            return cpu_result
+            # Only calculate CPU fallback when GPU fails
+            return {
+                'metric_name': metric_name,
+                'mean': float(np.mean(data)),
+                'max': float(np.max(data)),
+                'queue_id': queue_id,
+                'processed_on': 'CPU_Error_Fallback'
+            }
     
     def process_metrics(self, metric_data_dict: Dict[str, np.ndarray]) -> Dict[str, Dict[str, float]]:
         """Process multiple metrics in parallel on different GPU cores"""
