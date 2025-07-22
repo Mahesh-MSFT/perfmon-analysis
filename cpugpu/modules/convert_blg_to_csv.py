@@ -110,7 +110,16 @@ def convert_blg_to_csv(log_dir: str) -> Dict[str, int]:
                     failed_files += 1
                 
                 completed = converted_files + skipped_files + failed_files
-                if completed % 10 == 0 or completed == total_files:  # Progress every 10 files
+                # Show progress more frequently for small file counts
+                show_progress = False
+                if total_files <= 5:
+                    show_progress = True  # Show every file for small batches
+                elif total_files <= 20:
+                    show_progress = (completed % 5 == 0)  # Every 5 files for medium batches
+                else:
+                    show_progress = (completed % 10 == 0)  # Every 10 files for large batches
+                
+                if show_progress or completed == total_files:
                     print(f"Progress: {completed}/{total_files} files processed")
                     
             except Exception as e:
