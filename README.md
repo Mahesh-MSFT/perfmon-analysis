@@ -5,7 +5,7 @@ mermaid: true
 
 Performance testing involves execution of multiple runs. These runs spans multiple days/weeks. [perfmon](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/perfmon) is a widely used tool for gathering diagnostic data during performance testing on Windows servers. perfmon captures data from a perfomance test which can be exported as `.blg` file for further analysis. If there are multiple teams involved in performance testing exercise then sharing these `.blg` files can enable every team member to analyze them independently. 
 
-Perfmon File Analyzer offers **two processing options**: a standard sequential processor (`perfmon.py`) and a high-performance parallel processor (`perfmon2.py`) that provides 2-3x faster processing with advanced memory optimization and timezone-agnostic support.
+Perfmon File Analyzer offers **three processing options**: a standard sequential processor (`perfmon.py`), a high-performance parallel processor (`perfmon2.py`), and a GPU-accelerated processor (`perfmon3.py`) that provides the best performance with OpenCL GPU computing.
 
 ## Challenges with perfmon file analysis
 
@@ -29,31 +29,43 @@ Perfmon File Analyzer addresses the challenges discussed above. It is a utility 
 
 ## Performance Comparison
 
-Perfmon File Analyzer offers two processing options with different performance characteristics:
+Perfmon File Analyzer offers three processing options with different performance characteristics:
 
-| Feature | perfmon.py (Standard) | perfmon2.py (Parallel) |
-|---------|----------------------|------------------------|
-| **Processing Speed** | Sequential | **1.9x faster** |
-| **Memory Usage** | Standard | **99%+ optimized** |
-| **CPU Utilization** | Single-threaded | **Multi-core parallel** |
-| **Resource Management** | Basic | **Advanced with GC** |
-| **Scalability** | Limited | **High** |
-| **Recommended For** | Small datasets | **Large datasets** |
+| Feature | perfmon.py (Standard) | perfmon2.py (Parallel) | perfmon3.py (GPU-Accelerated) |
+|---------|----------------------|------------------------|--------------------------------|
+| **Processing Speed** | Sequential | **1.9x faster** | **2.5x faster** |
+| **Memory Usage** | Standard | **99%+ optimized** | **99%+ optimized** |
+| **CPU Utilization** | Single-threaded | **Multi-core parallel** | **Multi-core parallel** |
+| **GPU Utilization** | None | None | **OpenCL GPU acceleration** |
+| **Resource Management** | Basic | **Advanced with GC** | **Advanced with GC** |
+| **Scalability** | Limited | **High** | **Highest** |
+| **Hardware Requirements** | Basic CPU | Multi-core CPU | **CPU + OpenCL GPU** |
+| **Recommended For** | Small datasets | **Large datasets** | **Maximum performance** |
 
-**Real-World Performance Test:**
+**Real-World Performance Test Results:**
 - **Dataset**: 3 files, 25 user-selected metrics (out of 6,500+ total columns per file)
 - **Total samples**: 35,806 rows (16,130 + 10,806 + 8,870)
 - **Data scale**: ~19,500+ total columns across all files reduced to 75 targeted metric columns
 - **Column reduction**: 99.6% data reduction (from ~19,500 to 75 relevant columns)
-- **perfmon.py**: 2 minutes and 53.87 seconds (173.87s)
-- **perfmon2.py**: 1 minutes and 33.06 seconds (93.06s)
-- **Performance gain**: 1.9x faster processing
-- **Memory optimization**: Intelligent filtering processes only relevant data from massive datasets
-- **Parallel architecture**: Files + metrics processed simultaneously
+
+### Processing Time Comparison:
+- **perfmon.py**: 4 minutes and 21.91 seconds (261.91s)
+- **perfmon2.py**: 2 minutes and 57.12 seconds (177.12s)
+- **perfmon3.py**: 1 minutes and 43.30 seconds (103.30s)
+
+### Performance Gains:
+- **perfmon2.py vs perfmon.py**: 1.9x faster processing (84.79s saved)
+- **perfmon3.py vs perfmon.py**: 2.5x faster processing (158.61s saved)
+- **perfmon3.py vs perfmon2.py**: 1.4x faster processing (73.82s saved)
+
+### Architecture Advantages:
+- **perfmon.py**: Basic sequential processing, minimal resource usage
+- **perfmon2.py**: Parallel CPU processing with intelligent memory optimization
+- **perfmon3.py**: GPU-accelerated processing with adaptive OpenCL queue sizing (256-512 queues)
 
 ## Perfmon File Analyzer high-level design
 
-Following flowcharts describe high-level overview of how both processing options work.
+Following flowcharts describe high-level overview of how all three processing options work.
 
 ### Sequential Processing (perfmon.py)
 ```mermaid
@@ -96,7 +108,7 @@ flowchart TD
     style S fill:#fce4ec
 ```
 
-### Parallel Processing (perfmon2.py) - Recommended
+### Parallel Processing (perfmon2.py)
 ```mermaid
 flowchart TD
     A[Start] --> B[Parallel .blg to .csv Conversion]
@@ -132,6 +144,48 @@ flowchart TD
     style F1 fill:#e8f5e8
     style F2 fill:#e8f5e8
     style F3 fill:#e8f5e8
+    style I fill:#fff3e0
+```
+
+### GPU-Accelerated Processing (perfmon3.py) - **Recommended for Best Performance**
+```mermaid
+flowchart TD
+    A[Start] --> B[Parallel .blg to .csv Conversion]
+    B --> C[Process Multiple CSV Files in Parallel]
+    
+    C --> D1[File 1: Extract & Filter Data]
+    C --> D2[File 2: Extract & Filter Data] 
+    C --> D3[File 3: Extract & Filter Data]
+    
+    D1 --> E1[Find Logical End]
+    D2 --> E2[Find Logical End]
+    D3 --> E3[Find Logical End]
+    
+    E1 --> F1[GPU-Accelerated Metric Processing]
+    E2 --> F2[GPU-Accelerated Metric Processing]
+    E3 --> F3[GPU-Accelerated Metric Processing]
+    
+    F1 --> G1[OpenCL GPU Kernels: Calculate Statistics]
+    F2 --> G2[OpenCL GPU Kernels: Calculate Statistics]
+    F3 --> G3[OpenCL GPU Kernels: Calculate Statistics]
+    
+    G1 --> H[Consolidate Results]
+    G2 --> H
+    G3 --> H
+    
+    H --> I[Memory Cleanup & GC]
+    I --> J[Organize & Process Statistics]
+    J --> K[Write to Excel]
+    K --> L[End]
+    
+    style B fill:#e3f2fd
+    style C fill:#e3f2fd
+    style F1 fill:#e8f5e8
+    style F2 fill:#e8f5e8
+    style F3 fill:#e8f5e8
+    style G1 fill:#f3e5f5
+    style G2 fill:#f3e5f5
+    style G3 fill:#f3e5f5
     style I fill:#fff3e0
 ```
 
@@ -473,28 +527,9 @@ Ensure that following prerequisites are in place before getting started with Per
   - Files filtered in parallel using multiple CPU cores
   - Metrics within each file processed using GPU compute units via OpenCL
   - Adaptive queue allocation: 256 queues (<150 columns), 384 queues (150-300 columns), 512 queues (>300 columns)
-  - Automatic fallback to CPU processing if GPU unavailable6. 
-  
+  - Automatic fallback to CPU processing if GPU unavailable
+
 Alternatively, use Python Extension in VS Code to run `perfmon.py`, `perfmon2.py`, or `perfmon3.py`.
-
-## Performance Comparison
-
-Based on real-world testing with 3 .blg files containing ~35,000 total data points:
-
-| Script | Processing Time | Speedup vs perfmon.py | Architecture |
-|--------|----------------|----------------------|--------------|
-| **perfmon.py** | 4m 21s | Baseline (1.0x) | Sequential processing |
-| **perfmon2.py** | 2m 57s | **1.9x faster** | Parallel CPU processing |
-| **perfmon3.py** | 1m 43s | **2.5x faster** | GPU-accelerated processing |
-
-### Key Performance Insights:
-- **perfmon3.py**: Best overall performance using Intel Arc A770 GPU (128 compute units, OpenCL)
-- **perfmon2.py**: Excellent CPU-only performance for systems without compatible GPU
-- **perfmon.py**: Reliable baseline option for resource-constrained environments
-
-**Hardware Tested:** Intel i7-13700KF (16 cores, 24 threads), Intel Arc A770 GPU, 32GB RAM
-
-**Recommendation:** Use perfmon3.py for best performance if you have a compatible GPU with OpenCL support. Fall back to perfmon2.py for CPU-only processing.
 
 ## Post-deployment Steps
 
