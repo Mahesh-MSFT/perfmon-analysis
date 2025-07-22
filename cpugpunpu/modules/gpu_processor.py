@@ -252,7 +252,7 @@ class GPUProcessor:
         gpu_processed = sum(1 for r in results.values() if 'GPU' in r.get('processed_on', ''))
         cpu_processed = len(results) - gpu_processed
         
-        print(f"Parallel processing complete: {gpu_processed} on GPU, {cpu_processed} on CPU")
+        #print(f"Parallel processing complete: {gpu_processed} on GPU, {cpu_processed} on CPU")
         return results
 
 # Global instance

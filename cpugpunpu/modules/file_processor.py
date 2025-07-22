@@ -138,11 +138,11 @@ def print_gpu_configuration(optimal_gpu_workers: int):
         print("GPU not detected, using fallback: 4 workers")
         return
     
-    print(f"Using {optimal_gpu_workers} workers for parallel processing")
+    # GPU configuration details already shown in hardware profile section
 
 def print_pipeline_architecture(optimal_gpu_workers: int):
     """Print the pipeline architecture explanation."""
-    print(f"Starting parallel processing with {optimal_gpu_workers} workers...")
+    # Pipeline details will be shown during actual processing phases
 
 def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int]:
     """Calculate optimal workers for parallel processing."""
