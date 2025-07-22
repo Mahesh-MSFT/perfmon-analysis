@@ -10,6 +10,7 @@ import gc
 from cpugpu.modules.hardware_detector import get_hardware_detector, print_hardware_info
 from cpugpu.modules.convert_blg_to_csv import convert_blg_to_csv
 from cpugpu.modules.file_processor import file_processor
+from shared.modules.excel_creator import excel_creator
 
 # Configuration
 log_directory = r'C:\PATH\TO\BLGs'
@@ -94,13 +95,13 @@ def main():
         baseline_metric_name = 'ASP.NET Applications(__Total__)\Request Execution Time'  # Same as perfmon2
         
         # Process the CSV files
-        statistics_df, performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
+        all_statistics_df, performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
         
-        if statistics_df.empty:
-           print("No statistics data was generated.")
+        # Write the combined statistics to an Excel file
+        excel_creator(all_statistics_df, log_directory)
         
         # Explicitly clear large DataFrame from memory
-        del statistics_df
+        del all_statistics_df
         
         # Force garbage collection to free up memory
         gc.collect()
