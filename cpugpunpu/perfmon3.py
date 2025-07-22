@@ -99,10 +99,8 @@ def main():
         # Process the CSV files
         statistics_df, performance_data = file_processor(log_directory, metric_names, baseline_metric_name)
         
-        if not statistics_df.empty:
-            print(f"Statistics calculated for {len(statistics_df)} metrics")
-        else:
-            print("No statistics data was generated.")
+        if statistics_df.empty:
+           print("No statistics data was generated.")
         
         # Explicitly clear large DataFrame from memory
         del statistics_df
