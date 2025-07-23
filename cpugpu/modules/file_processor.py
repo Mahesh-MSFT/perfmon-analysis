@@ -145,18 +145,30 @@ def print_pipeline_architecture(optimal_gpu_workers: int):
     # Pipeline details will be shown during actual processing phases
 
 def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int]:
-    """Calculate optimal workers for parallel processing."""
+    """Calculate optimal workers for parallel processing using 80% of available CPU cores."""
     
     if not csv_file_paths:
         return {'file_workers': 1}
     
     hardware = get_hardware_detector()
     total_cpu_cores = hardware.profile.cpu.cores
-    file_workers = min(len(csv_file_paths), max(1, total_cpu_cores // 2))
+    available_memory_gb = hardware.profile.available_memory_gb
+    
+    # Use 80% of CPU cores for optimal performance while leaving headroom for system processes
+    optimal_cpu_workers = max(1, int(total_cpu_cores * 0.8))
+    
+    # Memory-based limit: assume each worker needs ~2GB for large CSV processing
+    memory_limited_workers = max(1, int(available_memory_gb / 2))
+    
+    # Take the minimum of file count, CPU-based, and memory-based limits
+    file_workers = min(len(csv_file_paths), optimal_cpu_workers, memory_limited_workers)
     
     allocation = {
         'file_workers': file_workers,
-        'total_cpu_cores': total_cpu_cores
+        'total_cpu_cores': total_cpu_cores,
+        'available_memory_gb': available_memory_gb,
+        'cpu_utilization_percent': (file_workers / total_cpu_cores) * 100,
+        'memory_per_worker_gb': available_memory_gb / file_workers if file_workers > 0 else 0
     }
     
     return allocation
@@ -198,8 +210,8 @@ def process_single_file_phase2(file_result, file_path, metric_names, baseline_me
         print(f"Error processing file {file_path}: {e}")
         return []
 
-def execute_phase1(csv_file_paths: List[str], baseline_metric_name: str):
-    """Execute Phase 1: Data preparation."""
+def prepare_cpu_allocation(csv_file_paths: List[str], baseline_metric_name: str):
+    """Prepare arguments and allocate CPU resources for data preparation phase."""
     
     hardware_allocation = calculate_hardware_aware_workers(csv_file_paths)
     
@@ -353,8 +365,8 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     
     print(f"Found {len(csv_file_paths)} CSV files to process")
     
-    # Step 2: Execute Phase 1 (data preparation)
-    phase1_args, hardware_allocation = execute_phase1(csv_file_paths, baseline_metric_name)
+    # Step 2: Prepare CPU allocation for data preparation
+    phase1_args, hardware_allocation = prepare_cpu_allocation(csv_file_paths, baseline_metric_name)
     
     # Step 3: Setup Phase 2 configuration
     optimal_gpu_workers = calculate_optimal_gpu_workers()
