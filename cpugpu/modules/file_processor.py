@@ -159,8 +159,8 @@ def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int
     
     return allocation
 
-def process_single_file_phase2(file_result, file_path, metric_names, baseline_metric_name):
-    """Process Phase 2 for a single file."""
+def submit_file_metric_processing(file_result, file_path, metric_names, baseline_metric_name):
+    """Submit a file for GPU-accelerated metric processing."""
     try:
         # Pre-filter file data to include only relevant metric columns + time column
         filtered_perfmon_data = file_result['filtered_data']
@@ -197,18 +197,18 @@ def process_single_file_phase2(file_result, file_path, metric_names, baseline_me
         return []
 
 def prepare_cpu_allocation(csv_file_paths: List[str], baseline_metric_name: str):
-    """Prepare arguments and allocate CPU resources for data preparation phase."""
+    """Prepare task definitions and allocate CPU resources for data preparation phase."""
     
     hardware_allocation = calculate_hardware_aware_workers(csv_file_paths)
     
-    phase1_args = [
+    file_processing_tasks = [
         (file_path, baseline_metric_name)
         for file_path in csv_file_paths
     ]
     
-    return phase1_args, hardware_allocation
+    return file_processing_tasks, hardware_allocation
 
-def execute_parallel_pipeline(phase1_args: List[Tuple], hardware_allocation: Dict[str, int], 
+def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_allocation: Dict[str, int], 
                               optimal_gpu_workers: int, metric_names: List[str], baseline_metric_name: str):
     """Execute the parallel pipeline with Phase 1 (CPU) and Phase 2 (GPU) processing."""
     
@@ -226,37 +226,37 @@ def execute_parallel_pipeline(phase1_args: List[Tuple], hardware_allocation: Dic
         with ThreadPoolExecutor(max_workers=optimal_gpu_workers, thread_name_prefix="Phase2") as gpu_executor:
             
             # Submit Phase 1 tasks
-            phase1_futures = {
-                process_executor.submit(process_single_file, args): args[0] 
-                for args in phase1_args
+            file_processing_futures = {
+                process_executor.submit(process_single_file, task): task[0] 
+                for task in file_processing_tasks
             }
             
             gpu_phase2_futures = []
             completed_files = 0
             
             # Process Phase 1 results and immediately start Phase 2
-            for phase1_future in as_completed(phase1_futures):
-                file_path = phase1_futures[phase1_future]
+            for file_processing_future in as_completed(file_processing_futures):
+                file_path = file_processing_futures[file_processing_future]
                 completed_files += 1
                 
                 try:
-                    file_result = phase1_future.result()
+                    file_result = file_processing_future.result()
                     if file_result is not None:
                         filtered_file_data.append(file_result)
                         
-                        print(f"Filtered {completed_files}/{len(phase1_args)} files")
+                        print(f"Filtered {completed_files}/{len(file_processing_tasks)} files")
                         
                         # Track first Phase 2 start
                         if first_phase2_start is None:
                             first_phase2_start = pd.Timestamp.now()
                         
                         # Submit Phase 2 task immediately
-                        gpu_future = gpu_executor.submit(process_single_file_phase2, file_result, file_path, metric_names, baseline_metric_name)
+                        gpu_future = gpu_executor.submit(submit_file_metric_processing, file_result, file_path, metric_names, baseline_metric_name)
                         gpu_phase2_futures.append(gpu_future)
                         
                         last_phase1_complete = pd.Timestamp.now()
                     else:
-                        print(f"Filtered {completed_files}/{len(phase1_args)} files")
+                        print(f"Filtered {completed_files}/{len(file_processing_tasks)} files")
                         last_phase1_complete = pd.Timestamp.now()
                 
                 except Exception as e:
@@ -296,7 +296,7 @@ def execute_parallel_pipeline(phase1_args: List[Tuple], hardware_allocation: Dic
         'files_processed': len(filtered_file_data),
         'statistics_generated': len(all_statistics_list),
         'gpu_processing_rate': len(all_statistics_list) / total_pipeline_duration if total_pipeline_duration > 0 else 0,
-        'overall_throughput': len(phase1_args) / total_pipeline_duration if total_pipeline_duration > 0 else 0
+        'overall_throughput': len(file_processing_tasks) / total_pipeline_duration if total_pipeline_duration > 0 else 0
     }
     
     return filtered_file_data, all_statistics_list, timing_data
@@ -352,14 +352,14 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     print(f"Found {len(csv_file_paths)} CSV files to process")
     
     # Step 2: Prepare CPU allocation for data preparation
-    phase1_args, hardware_allocation = prepare_cpu_allocation(csv_file_paths, baseline_metric_name)
+    file_processing_tasks, hardware_allocation = prepare_cpu_allocation(csv_file_paths, baseline_metric_name)
     
     # Step 3: Setup Phase 2 configuration
     optimal_gpu_workers = calculate_optimal_gpu_workers()
     
     # Step 4: Execute parallel pipeline
     filtered_file_data, all_statistics_list, timing_data = execute_parallel_pipeline(
-        phase1_args, hardware_allocation, optimal_gpu_workers, metric_names, baseline_metric_name
+        file_processing_tasks, hardware_allocation, optimal_gpu_workers, metric_names, baseline_metric_name
     )
     
     # Step 5: Print timing summary
