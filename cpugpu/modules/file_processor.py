@@ -216,22 +216,22 @@ def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_alloc
     all_statistics_list = []
     
     # Timing tracking
-    phase1_start = pd.Timestamp.now()
-    first_phase2_start = None
-    last_phase1_complete = None
-    phase2_only_start = None
-    phase2_only_end = None
+    file_processing_start = pd.Timestamp.now()
+    first_metric_start = None
+    file_processing_complete = None
+    metric_only_start = None
+    metric_processing_end = None
     
-    with ProcessPoolExecutor(max_workers=hardware_allocation['file_workers']) as process_executor:
-        with ThreadPoolExecutor(max_workers=optimal_gpu_workers, thread_name_prefix="Phase2") as gpu_executor:
+    with ProcessPoolExecutor(max_workers=hardware_allocation['file_workers']) as file_executor:
+        with ThreadPoolExecutor(max_workers=optimal_gpu_workers, thread_name_prefix="Phase2") as metric_executor:
             
             # Submit Phase 1 tasks
             file_processing_futures = {
-                process_executor.submit(process_single_file, task): task[0] 
+                file_executor.submit(process_single_file, task): task[0] 
                 for task in file_processing_tasks
             }
             
-            gpu_phase2_futures = []
+            metric_processing_futures = []
             completed_files = 0
             
             # Process Phase 1 results and immediately start Phase 2
@@ -247,51 +247,51 @@ def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_alloc
                         print(f"Filtered {completed_files}/{len(file_processing_tasks)} files")
                         
                         # Track first Phase 2 start
-                        if first_phase2_start is None:
-                            first_phase2_start = pd.Timestamp.now()
+                        if first_metric_start is None:
+                            first_metric_start = pd.Timestamp.now()
                         
                         # Submit Phase 2 task immediately
-                        gpu_future = gpu_executor.submit(submit_file_metric_processing, file_result, file_path, metric_names, baseline_metric_name)
-                        gpu_phase2_futures.append(gpu_future)
+                        metric_future = metric_executor.submit(submit_file_metric_processing, file_result, file_path, metric_names, baseline_metric_name)
+                        metric_processing_futures.append(metric_future)
                         
-                        last_phase1_complete = pd.Timestamp.now()
+                        file_processing_complete = pd.Timestamp.now()
                     else:
                         print(f"Filtered {completed_files}/{len(file_processing_tasks)} files")
-                        last_phase1_complete = pd.Timestamp.now()
+                        file_processing_complete = pd.Timestamp.now()
                 
                 except Exception as e:
                     print(f"Error processing file {file_path}: {e}")
-                    last_phase1_complete = pd.Timestamp.now()
+                    file_processing_complete = pd.Timestamp.now()
             
             # Wait for all Phase 2 processing to complete
-            phase2_only_start = pd.Timestamp.now()
+            metric_only_start = pd.Timestamp.now()
             
-            for gpu_future in as_completed(gpu_phase2_futures):
+            for metric_future in as_completed(metric_processing_futures):
                 try:
-                    gpu_stats = gpu_future.result()
-                    if gpu_stats:
-                        all_statistics_list.extend(gpu_stats)
+                    metric_stats = metric_future.result()
+                    if metric_stats:
+                        all_statistics_list.extend(metric_stats)
                 except Exception as e:
                     print(f"Error collecting Phase 2 results: {e}")
             
-            phase2_only_end = pd.Timestamp.now()
+            metric_processing_end = pd.Timestamp.now()
     
     # Calculate timing metrics
-    total_pipeline_duration = (phase2_only_end - phase1_start).total_seconds()
-    phase1_only_duration = (last_phase1_complete - phase1_start).total_seconds()
-    phase2_total_duration = (phase2_only_end - first_phase2_start).total_seconds() if first_phase2_start else 0
-    phase2_only_duration = (phase2_only_end - phase2_only_start).total_seconds() if phase2_only_start else 0
+    total_pipeline_duration = (metric_processing_end - file_processing_start).total_seconds()
+    file_processing_duration = (file_processing_complete - file_processing_start).total_seconds()
+    metric_processing_duration = (metric_processing_end - first_metric_start).total_seconds() if first_metric_start else 0
+    phase2_only_duration = (metric_processing_end - metric_only_start).total_seconds() if metric_only_start else 0
     
     # Calculate overlap
-    if first_phase2_start and last_phase1_complete and first_phase2_start < last_phase1_complete:
-        overlap_duration = (min(last_phase1_complete, phase2_only_end) - first_phase2_start).total_seconds()
+    if first_metric_start and file_processing_complete and first_metric_start < file_processing_complete:
+        overlap_duration = (min(file_processing_complete, metric_processing_end) - first_metric_start).total_seconds()
     else:
         overlap_duration = 0
     
     timing_data = {
         'total_time': total_pipeline_duration,
-        'phase1_duration': phase1_only_duration,
-        'phase2_duration': phase2_total_duration,
+        'phase1_duration': file_processing_duration,
+        'phase2_duration': metric_processing_duration,
         'overlap_duration': overlap_duration,
         'files_processed': len(filtered_file_data),
         'statistics_generated': len(all_statistics_list),
