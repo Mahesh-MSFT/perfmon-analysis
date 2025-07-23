@@ -130,20 +130,6 @@ def calculate_optimal_gpu_workers() -> int:
     
     return optimal_gpu_workers
 
-def print_gpu_configuration(optimal_gpu_workers: int):
-    """Print GPU processing configuration details."""
-    hardware = get_hardware_detector()
-    
-    if not hardware.profile.gpu:
-        print("GPU not detected, using fallback: 4 workers")
-        return
-    
-    # GPU configuration details already shown in hardware profile section
-
-def print_pipeline_architecture(optimal_gpu_workers: int):
-    """Print the pipeline architecture explanation."""
-    # Pipeline details will be shown during actual processing phases
-
 def calculate_hardware_aware_workers(csv_file_paths: List[str]) -> Dict[str, int]:
     """Calculate optimal workers for parallel processing using 80% of available CPU cores."""
     
@@ -222,9 +208,9 @@ def prepare_cpu_allocation(csv_file_paths: List[str], baseline_metric_name: str)
     
     return phase1_args, hardware_allocation
 
-def execute_streaming_pipeline(phase1_args: List[Tuple], hardware_allocation: Dict[str, int], 
-                               optimal_gpu_workers: int, metric_names: List[str], baseline_metric_name: str):
-    """Execute the streaming pipeline with Phase 1 and Phase 2 processing."""
+def execute_parallel_pipeline(phase1_args: List[Tuple], hardware_allocation: Dict[str, int], 
+                              optimal_gpu_workers: int, metric_names: List[str], baseline_metric_name: str):
+    """Execute the parallel pipeline with Phase 1 (CPU) and Phase 2 (GPU) processing."""
     
     filtered_file_data = []
     all_statistics_list = []
@@ -370,11 +356,9 @@ def file_processor(log_directory: str, metric_names: List[str], baseline_metric_
     
     # Step 3: Setup Phase 2 configuration
     optimal_gpu_workers = calculate_optimal_gpu_workers()
-    print_gpu_configuration(optimal_gpu_workers)
-    print_pipeline_architecture(optimal_gpu_workers)
     
-    # Step 4: Execute streaming pipeline
-    filtered_file_data, all_statistics_list, timing_data = execute_streaming_pipeline(
+    # Step 4: Execute parallel pipeline
+    filtered_file_data, all_statistics_list, timing_data = execute_parallel_pipeline(
         phase1_args, hardware_allocation, optimal_gpu_workers, metric_names, baseline_metric_name
     )
     
