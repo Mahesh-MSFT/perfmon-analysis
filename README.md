@@ -122,13 +122,29 @@ flowchart TD
     D2 --> E2[Find Logical End]
     D3 --> E3[Find Logical End]
     
-    E1 --> F1[Parallel Processing]
-    E2 --> F2[Parallel Processing]
-    E3 --> F3[Parallel Processing]
+    E1 --> F1A[CPU Core 1]
+    E1 --> F1B[CPU Core 2]
+    E1 --> F1C[CPU Core N]
     
-    F1 --> G1[Calculate Statistics]
-    F2 --> G2[Calculate Statistics]
-    F3 --> G3[Calculate Statistics]
+    E2 --> F2A[CPU Core 1]
+    E2 --> F2B[CPU Core 2]
+    E2 --> F2C[CPU Core N]
+    
+    E3 --> F3A[CPU Core 1]
+    E3 --> F3B[CPU Core 2]
+    E3 --> F3C[CPU Core N]
+    
+    F1A --> G1[Statistics File 1]
+    F1B --> G1
+    F1C --> G1
+    
+    F2A --> G2[Statistics File 2]
+    F2B --> G2
+    F2C --> G2
+    
+    F3A --> G3[Statistics File 3]
+    F3B --> G3
+    F3C --> G3
     
     G1 --> H[Consolidate Results]
     G2 --> H
@@ -141,9 +157,15 @@ flowchart TD
     
     style B fill:#e1f5fe
     style C fill:#e1f5fe
-    style F1 fill:#e8f5e8
-    style F2 fill:#e8f5e8
-    style F3 fill:#e8f5e8
+    style F1A fill:#e8f5e8
+    style F1B fill:#e8f5e8
+    style F1C fill:#e8f5e8
+    style F2A fill:#e8f5e8
+    style F2B fill:#e8f5e8
+    style F2C fill:#e8f5e8
+    style F3A fill:#e8f5e8
+    style F3B fill:#e8f5e8
+    style F3C fill:#e8f5e8
     style I fill:#fff3e0
 ```
 
@@ -161,32 +183,75 @@ flowchart TD
     D2 --> E2[Find Logical End]
     D3 --> E3[Find Logical End]
     
-    E1 --> F1[GPU-Accelerated Processing]
-    E2 --> F2[GPU-Accelerated Processing]
-    E3 --> F3[GPU-Accelerated Processing]
+    E1 --> F1A[CPU Core 1]
+    E1 --> F1B[CPU Core 2]
     
-    F1 --> G1[GPU Statistical Analysis]
-    F2 --> G2[GPU Statistical Analysis]
-    F3 --> G3[GPU Statistical Analysis]
+    E2 --> F2A[CPU Core 1]
+    E2 --> F2B[CPU Core 2]
     
-    G1 --> H[Consolidate Results]
-    G2 --> H
-    G3 --> H
+    E3 --> F3A[CPU Core 1]
+    E3 --> F3B[CPU Core 2]
     
-    H --> I[Memory Cleanup & GC]
-    I --> J[Organize Statistics]
-    J --> K[Write to Excel]
-    K --> L[End]
+    F1A --> G1A[GPU Unit 1]
+    F1A --> G1B[GPU Unit 2]
+    F1A --> G1C[GPU Unit N]
+    F1B --> G1A
+    F1B --> G1B
+    F1B --> G1C
+    
+    F2A --> G2A[GPU Unit 1]
+    F2A --> G2B[GPU Unit 2]
+    F2A --> G2C[GPU Unit N]
+    F2B --> G2A
+    F2B --> G2B
+    F2B --> G2C
+    
+    F3A --> G3A[GPU Unit 1]
+    F3A --> G3B[GPU Unit 2]
+    F3A --> G3C[GPU Unit N]
+    F3B --> G3A
+    F3B --> G3B
+    F3B --> G3C
+    
+    G1A --> H1[Statistics File 1]
+    G1B --> H1
+    G1C --> H1
+    
+    G2A --> H2[Statistics File 2]
+    G2B --> H2
+    G2C --> H2
+    
+    G3A --> H3[Statistics File 3]
+    G3B --> H3
+    G3C --> H3
+    
+    H1 --> I[Consolidate Results]
+    H2 --> I
+    H3 --> I
+    
+    I --> J[Memory Cleanup & GC]
+    J --> K[Organize Statistics]
+    K --> L[Write to Excel]
+    L --> M[End]
     
     style B fill:#e3f2fd
     style C fill:#e3f2fd
-    style F1 fill:#e8f5e8
-    style F2 fill:#e8f5e8
-    style F3 fill:#e8f5e8
-    style G1 fill:#f3e5f5
-    style G2 fill:#f3e5f5
-    style G3 fill:#f3e5f5
-    style I fill:#fff3e0
+    style F1A fill:#e8f5e8
+    style F1B fill:#e8f5e8
+    style F2A fill:#e8f5e8
+    style F2B fill:#e8f5e8
+    style F3A fill:#e8f5e8
+    style F3B fill:#e8f5e8
+    style G1A fill:#f3e5f5
+    style G1B fill:#f3e5f5
+    style G1C fill:#f3e5f5
+    style G2A fill:#f3e5f5
+    style G2B fill:#f3e5f5
+    style G2C fill:#f3e5f5
+    style G3A fill:#f3e5f5
+    style G3B fill:#f3e5f5
+    style G3C fill:#f3e5f5
+    style J fill:#fff3e0
 ```
 
 Each of the step is described below.
