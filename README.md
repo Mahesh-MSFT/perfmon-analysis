@@ -70,34 +70,34 @@ Following flowcharts describe high-level overview of how all three processing op
 ### Sequential Processing (perfmon.py)
 ```mermaid
 flowchart TD
-    A[Start] --> B[Sequential .blg to .csv Conversion]
-    B --> C[Process CSV Files Sequentially]
+    A[Start] --> B[Convert .blg to .csv]
+    B --> C[Process CSV Files]
     
-    C --> D[File 1: Extract & Filter Data]
+    C --> D[File 1: Extract Data]
     D --> E[Find Logical End]
-    E --> F[Sequential Metric Processing]
-    F --> G[Calculate Statistics for User Configured Metrics]
+    E --> F[Process Metrics]
+    F --> G[Calculate Statistics]
     G --> H1[Store Results]
     
     H1 --> I{More Files?}
-    I -->|Yes| J[File 2: Extract & Filter Data]
+    I -->|Yes| J[File 2: Extract Data]
     I -->|No| L[Consolidate Results]
     
     J --> K[Find Logical End]
-    K --> M[Sequential Metric Processing]
-    M --> N[Calculate Statistics for User Configured Metrics]
+    K --> M[Process Metrics]
+    M --> N[Calculate Statistics]
     N --> O[Store Results]
     O --> P{More Files?}
-    P -->|Yes| Q[File 3: Extract & Filter Data]
+    P -->|Yes| Q[File 3: Extract Data]
     P -->|No| L
     
     Q --> R[Find Logical End]
-    R --> S[Sequential Metric Processing]
-    S --> T[Calculate Statistics for User Configured Metrics]
+    R --> S[Process Metrics]
+    S --> T[Calculate Statistics]
     T --> U[Store Results]
     U --> L
     
-    L --> V[Organize & Process Statistics]
+    L --> V[Organize Statistics]
     V --> W[Write to Excel]
     W --> X[End]
     
@@ -111,31 +111,31 @@ flowchart TD
 ### Parallel Processing (perfmon2.py)
 ```mermaid
 flowchart TD
-    A[Start] --> B[Parallel .blg to .csv Conversion]
-    B --> C[Process Multiple CSV Files in Parallel]
+    A[Start] --> B[Parallel .blg to .csv]
+    B --> C[Process Multiple CSV Files]
     
-    C --> D1[File 1: Extract & Filter Data]
-    C --> D2[File 2: Extract & Filter Data]
-    C --> D3[File 3: Extract & Filter Data]
+    C --> D1[File 1: Extract Data]
+    C --> D2[File 2: Extract Data]
+    C --> D3[File 3: Extract Data]
     
     D1 --> E1[Find Logical End]
     D2 --> E2[Find Logical End]
     D3 --> E3[Find Logical End]
     
-    E1 --> F1[Parallel Metric Processing]
-    E2 --> F2[Parallel Metric Processing]
-    E3 --> F3[Parallel Metric Processing]
+    E1 --> F1[Parallel Processing]
+    E2 --> F2[Parallel Processing]
+    E3 --> F3[Parallel Processing]
     
-    F1 --> G1[Calculate Statistics for User Configured Metrics]
-    F2 --> G2[Calculate Statistics for User Configured Metrics]
-    F3 --> G3[Calculate Statistics for User Configured Metrics]
+    F1 --> G1[Calculate Statistics]
+    F2 --> G2[Calculate Statistics]
+    F3 --> G3[Calculate Statistics]
     
     G1 --> H[Consolidate Results]
     G2 --> H
     G3 --> H
     
     H --> I[Memory Cleanup & GC]
-    I --> J[Organize & Process Statistics]
+    I --> J[Organize Statistics]
     J --> K[Write to Excel]
     K --> L[End]
     
@@ -150,31 +150,31 @@ flowchart TD
 ### GPU-Accelerated Processing (perfmon3.py) - **Recommended for Best Performance**
 ```mermaid
 flowchart TD
-    A[Start] --> B[Parallel .blg to .csv Conversion]
-    B --> C[Process Multiple CSV Files in Parallel]
+    A[Start] --> B[Parallel .blg to .csv]
+    B --> C[Process Multiple CSV Files]
     
-    C --> D1[File 1: Extract & Filter Data]
-    C --> D2[File 2: Extract & Filter Data] 
-    C --> D3[File 3: Extract & Filter Data]
+    C --> D1[File 1: Extract Data]
+    C --> D2[File 2: Extract Data] 
+    C --> D3[File 3: Extract Data]
     
     D1 --> E1[Find Logical End]
     D2 --> E2[Find Logical End]
     D3 --> E3[Find Logical End]
     
-    E1 --> F1[GPU-Accelerated Metric Processing]
-    E2 --> F2[GPU-Accelerated Metric Processing]
-    E3 --> F3[GPU-Accelerated Metric Processing]
+    E1 --> F1[GPU-Accelerated Processing]
+    E2 --> F2[GPU-Accelerated Processing]
+    E3 --> F3[GPU-Accelerated Processing]
     
-    F1 --> G1[GPU Compute: Statistical Analysis via OpenCL]
-    F2 --> G2[GPU Compute: Statistical Analysis via OpenCL]
-    F3 --> G3[GPU Compute: Statistical Analysis via OpenCL]
+    F1 --> G1[GPU Statistical Analysis]
+    F2 --> G2[GPU Statistical Analysis]
+    F3 --> G3[GPU Statistical Analysis]
     
     G1 --> H[Consolidate Results]
     G2 --> H
     G3 --> H
     
     H --> I[Memory Cleanup & GC]
-    I --> J[Organize & Process Statistics]
+    I --> J[Organize Statistics]
     J --> K[Write to Excel]
     K --> L[End]
     
