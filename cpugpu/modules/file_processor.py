@@ -219,7 +219,7 @@ def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_alloc
     file_processing_start = pd.Timestamp.now()
     first_metric_start = None
     file_processing_complete = None
-    metric_only_start = None
+    metric_processing_start = None
     metric_processing_end = None
     
     with ProcessPoolExecutor(max_workers=hardware_allocation['file_workers']) as file_executor:
@@ -264,7 +264,7 @@ def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_alloc
                     file_processing_complete = pd.Timestamp.now()
             
             # Wait for all Phase 2 processing to complete
-            metric_only_start = pd.Timestamp.now()
+            metric_processing_start = pd.Timestamp.now()
             
             for metric_future in as_completed(metric_processing_futures):
                 try:
@@ -280,7 +280,7 @@ def execute_parallel_pipeline(file_processing_tasks: List[Tuple], hardware_alloc
     total_pipeline_duration = (metric_processing_end - file_processing_start).total_seconds()
     file_processing_duration = (file_processing_complete - file_processing_start).total_seconds()
     metric_processing_duration = (metric_processing_end - first_metric_start).total_seconds() if first_metric_start else 0
-    phase2_only_duration = (metric_processing_end - metric_only_start).total_seconds() if metric_only_start else 0
+    phase2_only_duration = (metric_processing_end - metric_processing_start).total_seconds() if metric_processing_start else 0
     
     # Calculate overlap
     if first_metric_start and file_processing_complete and first_metric_start < file_processing_complete:
